@@ -83,6 +83,7 @@ urlpatterns = [
     path("import/template.csv", importexport.import_template, name="import_template"),
     # Settings / reference data
     path("settings/", settings_views.settings_home, name="settings"),
+    path("settings/lab-pi/claim/", settings_views.claim_lab_pi, name="claim_lab_pi"),
     path("settings/templates/new/", settings_views.template_edit, name="template_create"),
     path("settings/templates/<int:pk>/", settings_views.template_edit, name="template_edit"),
     path("settings/templates/<int:pk>/delete/", settings_views.template_delete, name="template_delete"),

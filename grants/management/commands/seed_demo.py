@@ -86,12 +86,15 @@ class Command(BaseCommand):
             return Person.objects.create(first_name=first, last_name=last, kind=kind, position=position,
                                          institution=institution, user=link, notes="[demo] fictional")
 
-        pi_link = owner if owner and not hasattr(owner, "person") else None
-        pi = person("Jordan", "Lee", Person.Kind.LAB, "Associate Professor", "Example University", link=pi_link)
+        # Use your real Lab PI record if you have one, so the demo looks like your portfolio.
+        pi = Person.lab_pi()
+        if pi is None:
+            pi_link = owner if owner and owner.is_owner and not hasattr(owner, "person") else None
+            pi = person("Jordan", "Lee", Person.Kind.LAB_PI, "Associate Professor", "Example University", link=pi_link)
         postdoc = person("Sam", "Patel", Person.Kind.LAB, "Postdoctoral fellow", "Example University")
         grad = person("Riley", "Chen", Person.Kind.LAB, "Graduate student", "Example University")
         tech = person("Morgan", "Diaz", Person.Kind.LAB, "Research technician", "Example University")
-        collab = person("Avery", "Nakamura", Person.Kind.COLLABORATOR, "Professor", "Coastal Marine Institute")
+        collab = person("Avery", "Nakamura", Person.Kind.PI, "Professor", "Coastal Marine Institute")
         po = person("Casey", "Morgan", Person.Kind.PROGRAM_OFFICER, "Program Director", "NICHD")
         admin = person("Taylor", "Brooks", Person.Kind.ADMIN, "Grants administrator", "Example University")
 
@@ -176,7 +179,8 @@ class Command(BaseCommand):
         # 4. Foundation proposal in preparation, with a checklist
         a4 = app(title="Neural circuits for adaptive camouflage: development of chromatophore motor neurons",
                  short_name="Camouflage circuits (Simons)", funder=simons, mechanism="Collaboration award",
-                 status=Application.Status.DRAFTING, sponsor_deadline=d(24), internal_deadline=d(17),
+                 status=Application.Status.DRAFTING, role=Application.Role.MPI, contact_pi="Avery Nakamura",
+                 sponsor_deadline=d(24), internal_deadline=d(17),
                  requested_total=Decimal("1500000"), proposed_start=d(240), proposed_end=d(1335), probability=15,
                  priority="high", is_starred=True, tags=["cephalopod", "cell fate"],
                  team=[(pi, "mpi", 1.8), (collab, "mpi", 1.8)])

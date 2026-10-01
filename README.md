@@ -19,7 +19,7 @@ It runs as a set of Docker containers. Every record, including uploaded document
 **Each application has tabs for**
 - **Tasks**, with assignees, priorities and one-click completion.
 - **Documents**: upload files (stored in the database) or link to Google Drive, OneDrive or Box. Mark the final submitted version, version labels, and owner-only restriction for sensitive files. Text inside PDFs and Word files is indexed for search, so past Specific Aims and boilerplate are easy to find.
-- **Team and effort**: personnel with role and person-months (enter either person-months or % effort; the other updates).
+- **Team and effort**: personnel with role and person-months (enter either person-months or % effort; the other updates). The Lab PI (you) is added to every new application automatically, with the role taken from *My role*.
 - **Reviews**: the score, percentile and outcome, then one card per reviewer with criterion scores (NIH simplified framework, classic criteria or NSF merit criteria suggested), strengths, weaknesses, your planned response and **critique themes** that roll up across submissions.
 - **Notes and activity**: team notes (Markdown) and an activity timeline, plus field-level change history.
 
@@ -42,6 +42,7 @@ It runs as a set of Docker containers. Every record, including uploaded document
 
 **Security**
 - Login required for every page. Roles: **Owner** (manages users), **Editor** (changes data), **Viewer** (read-only).
+- People are typed as **Lab PI** (you, the lab head: one record, linked to an Owner login, assignable only by an Owner), lab member, **principal investigator (other lab)** for MPI partners, external collaborator, institutional colleague, program officer, grants administrator or mentor.
 - Optional or mandatory **two-factor authentication** (any TOTP app) with one-time backup codes.
 - Brute-force lockout, strict security headers (CSP, HSTS, no framing), HTTPS via Caddy, authenticated document downloads, owner-only documents, and a full audit history.
 
@@ -78,7 +79,7 @@ docker compose up -d --build
 Open <https://localhost> (your browser will warn about Caddy's local certificate on `localhost`). Sign in, then:
 
 1. **Profile and security**: change your password, turn on two-factor authentication, copy the calendar feed URL into Google Calendar (*Other calendars, From URL*).
-2. **Settings, People**: add yourself and link your login, so Effort and Current and Pending default to you.
+2. On the same page, confirm the **Lab PI** card says *This is you* (it is set up automatically for the first owner; otherwise click *This is me*). You are then added to new applications automatically, and Effort and Current and Pending default to you.
 3. Add an opportunity or application, or **import your history** from CSV (*New, Import from CSV*; a template is provided).
 
 To explore with fictional demo data first:

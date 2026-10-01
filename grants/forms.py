@@ -219,7 +219,10 @@ class DocumentForm(StyledModelForm):
 class PersonnelForm(StyledModelForm):
     new_first_name = forms.CharField(required=False, label="First name")
     new_last_name = forms.CharField(required=False, label="Last name")
-    new_kind = forms.ChoiceField(required=False, choices=Person.Kind.choices, label="Type", initial=Person.Kind.LAB)
+    new_kind = forms.ChoiceField(
+        required=False, label="Type", initial=Person.Kind.LAB,
+        choices=[c for c in Person.Kind.choices if c[0] != Person.Kind.LAB_PI],
+    )
 
     class Meta:
         model = Personnel
@@ -344,6 +347,32 @@ class PersonForm(StyledModelForm):
     class Meta:
         model = Person
         exclude = ["created_at", "updated_at"]
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+        kind = self.fields["kind"]
+        kind.help_text = (
+            "Lab PI is you, the head of this lab: one person only, linked to an Owner login. "
+            "Use Principal investigator for other labs' PIs (e.g. MPI partners)."
+        )
+        if user is not None and not user.is_owner:
+            if self.instance.pk and self.instance.is_lab_pi:
+                kind.disabled = True
+                self.fields["user"].disabled = True
+            else:
+                kind.choices = [c for c in kind.choices if c[0] != Person.Kind.LAB_PI]
+
+    def clean(self):
+        data = super().clean()
+        if data.get("kind") == Person.Kind.LAB_PI:
+            other = Person.objects.filter(kind=Person.Kind.LAB_PI).exclude(pk=self.instance.pk).first()
+            if other:
+                self.add_error("kind", f"{other} is already the Lab PI. Change their type first.")
+            linked = data.get("user")
+            if linked is not None and not linked.is_owner:
+                self.add_error("user", "The Lab PI must be linked to an Owner account.")
+        return data
 
 
 class TagForm(forms.ModelForm):

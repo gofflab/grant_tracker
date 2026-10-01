@@ -250,6 +250,7 @@ def application_create(request):
         app.save()
         form.save_m2m()
         form.save_tags(app)
+        services.add_lab_pi(app)
         log_activity(app, request.user, Activity.Kind.CREATED, "Application created")
         if app.opportunity and app.opportunity.status in (Opportunity.Status.WATCHING, Opportunity.Status.PLANNING):
             app.opportunity.status = Opportunity.Status.APPLYING
@@ -270,9 +271,12 @@ def application_create(request):
 @editor_required
 def application_edit(request, pk):
     app = get_object_or_404(Application, pk=pk)
+    old_role = app.role
     form = ApplicationForm(request.POST or None, instance=app)
     if request.method == "POST" and form.is_valid():
         form.save()
+        if app.role != old_role:
+            services.sync_lab_pi_role(app, old_role)
         changed = ", ".join(form[f].label.lower() for f in form.changed_data if f in form.fields and f not in ("new_tags", "extra"))
         log_activity(app, request.user, Activity.Kind.EDITED, f"Edited {changed}" if changed else "Edited details")
         messages.success(request, "Saved.")

@@ -223,6 +223,7 @@ def import_rows(rows, user, dry_run=True):
             for name in [t.strip() for t in re.split(r"[;,]", row.get("tags", "")) if t.strip()]:
                 tag, _ = Tag.objects.get_or_create(name__iexact=name, kind=Tag.Kind.TOPIC, defaults={"name": name[:60]})
                 app.tags.add(tag)
+            services.add_lab_pi(app)
             log_activity(app, user, Activity.Kind.CREATED, "Imported from CSV")
             if app.status == Application.Status.AWARDED:
                 end = award_data.get("end_date") or app.proposed_end

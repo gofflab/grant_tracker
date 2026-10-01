@@ -8,6 +8,7 @@ import os
 from django.core.management.base import BaseCommand
 
 from accounts.models import User
+from grants.services import claim_lab_pi
 
 
 class Command(BaseCommand):
@@ -21,8 +22,11 @@ class Command(BaseCommand):
         if not (username and password):
             self.stdout.write("No users yet. Set GT_OWNER_USERNAME and GT_OWNER_PASSWORD, or run `manage.py createsuperuser`.")
             return
-        User.objects.create_superuser(
+        user = User.objects.create_superuser(
             username=username, email=os.environ.get("GT_OWNER_EMAIL", ""), password=password, role=User.Role.OWNER,
             first_name=os.environ.get("GT_OWNER_FIRST_NAME", ""), last_name=os.environ.get("GT_OWNER_LAST_NAME", ""),
         )
-        self.stdout.write(self.style.SUCCESS(f"Created owner account '{username}'. Change the password after first sign-in."))
+        claim_lab_pi(user)
+        self.stdout.write(self.style.SUCCESS(
+            f"Created owner account '{username}' and its Lab PI record. Change the password after first sign-in."
+        ))

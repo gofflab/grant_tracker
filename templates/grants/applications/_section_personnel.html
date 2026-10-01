@@ -13,7 +13,7 @@
     <tbody>
     {% for p in personnel %}
       <tr>
-        <td class="title-cell"><span style="font-weight:550">{{ p.person }}</span>{% if p.is_key %} <span class="badge plain" title="Key personnel">Key</span>{% endif %}<small>{{ p.person.position|default:p.person.get_kind_display }}{% if p.person.institution %} · {{ p.person.institution }}{% endif %}</small></td>
+        <td class="title-cell"><span style="font-weight:550">{{ p.person }}</span>{% if p.person.is_lab_pi %} <span class="badge s-drafting plain" title="Head of this lab">Lab PI</span>{% endif %}{% if p.is_key %} <span class="badge plain" title="Key personnel">Key</span>{% endif %}<small>{{ p.person.position|default:p.person.get_kind_display }}{% if p.person.institution %} · {{ p.person.institution }}{% endif %}</small></td>
         <td>{{ p.get_role_display }}</td>
         <td class="num">{{ p.person_months|pm }}</td>
         <td class="num">{% if p.effort_percent is not None %}{{ p.effort_percent|num:1 }}%{% else %}—{% endif %}</td>

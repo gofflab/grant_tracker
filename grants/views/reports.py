@@ -3,6 +3,8 @@ import io
 from decimal import Decimal
 
 from django.conf import settings
+from django.db import models
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -12,8 +14,16 @@ from ..models import Application, Person
 from .common import json_for_chart
 
 
+def _people_with_work():
+    """People on at least one application, plus the Lab PI, Lab PI first."""
+    return (
+        Person.objects.filter(Q(assignments__isnull=False) | Q(kind=Person.Kind.LAB_PI)).distinct()
+        .order_by(models.Case(models.When(kind=Person.Kind.LAB_PI, then=0), default=1), "last_name", "first_name")
+    )
+
+
 def _default_person(request):
-    person = getattr(request.user, "person", None)
+    person = Person.lab_pi() or getattr(request.user, "person", None)
     if person:
         return person
     return Person.objects.filter(assignments__role__in=["pi", "mpi"]).distinct().first() or Person.objects.filter(
@@ -23,7 +33,7 @@ def _default_person(request):
 
 def effort(request):
     rows = effort_summary()
-    people = Person.objects.filter(assignments__isnull=False).distinct()
+    people = _people_with_work()
     selected = None
     if request.GET.get("person"):
         selected = people.filter(pk=request.GET["person"]).first()
@@ -102,7 +112,8 @@ def _support_items(person, include_preparing=False):
             "amount": (award.awarded_total if award else None) or app.requested_total,
             "goals": app.major_goals or app.abstract,
             "status_label": "Active" if bucket is active else app.get_status_display(),
-            "pm_years": project_person_months(app, person),
+            "pm_years": (pm_years := project_person_months(app, person)),
+            "pm_total": sum(p["pm"] for p in pm_years),
         })
     key = lambda i: (i["start"] or timezone.localdate())
     return sorted(active, key=key), sorted(pending, key=key)
@@ -121,7 +132,7 @@ def _pm_text(pm_years):
 
 
 def other_support(request):
-    people = Person.objects.filter(assignments__isnull=False).distinct()
+    people = _people_with_work()
     person = people.filter(pk=request.GET.get("person")).first() if request.GET.get("person") else _default_person(request)
     include_preparing = request.GET.get("preparing") == "1"
     active, pending = _support_items(person, include_preparing) if person else ([], [])

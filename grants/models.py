@@ -103,9 +103,11 @@ class Funder(TimeStamped):
 
 class Person(TimeStamped):
     class Kind(models.TextChoices):
+        LAB_PI = "lab_pi", "Lab PI (lab head)"
         LAB = "lab", "Lab member"
-        INTERNAL = "internal", "Institutional colleague"
+        PI = "pi", "Principal investigator (other lab)"
         COLLABORATOR = "collaborator", "External collaborator"
+        INTERNAL = "internal", "Institutional colleague"
         PROGRAM_OFFICER = "program_officer", "Program officer"
         ADMIN = "admin", "Grants administrator"
         MENTOR = "mentor", "Mentor / advisor"
@@ -130,6 +132,11 @@ class Person(TimeStamped):
     class Meta:
         ordering = ["last_name", "first_name"]
         verbose_name_plural = "people"
+        constraints = [
+            # The lab head is a single, special record: the default person for effort and
+            # Current & Pending, and added automatically to every new application.
+            models.UniqueConstraint(fields=["kind"], condition=models.Q(kind="lab_pi"), name="single_lab_pi"),
+        ]
 
     def __str__(self):
         return self.full_name
@@ -137,6 +144,14 @@ class Person(TimeStamped):
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}".strip()
+
+    @property
+    def is_lab_pi(self):
+        return self.kind == self.Kind.LAB_PI
+
+    @classmethod
+    def lab_pi(cls):
+        return cls.objects.filter(kind=cls.Kind.LAB_PI).first()
 
 
 # ---------------------------------------------------------------------------

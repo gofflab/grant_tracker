@@ -11,7 +11,7 @@
     <tr><th style="position:static">Primary place of performance</th><td>{{ i.place|default:"—" }}</td></tr>
     <tr><th style="position:static">Project / proposal dates</th><td>{{ i.start|date:"m/Y"|default:"?" }} – {{ i.end|date:"m/Y"|default:"?" }}</td></tr>
     <tr><th style="position:static">Total award amount (incl. indirect)</th><td>{{ i.amount|money }}</td></tr>
-    <tr><th style="position:static">Person months (calendar) per budget period</th><td>{% for p in i.pm_years %}{% if p.pm %}<span class="nowrap">Year {{ p.year }} ({{ p.start.year }}): {{ p.pm|pm }} CM</span>{% if not forloop.last %}; {% endif %}{% endif %}{% empty %}<span class="muted">Add project dates and person-months</span>{% endfor %}</td></tr>
+    <tr><th style="position:static">Person months (calendar) per budget period</th><td>{% if i.pm_total %}{% for p in i.pm_years %}{% if p.pm %}<span class="nowrap">Year {{ p.year }} ({{ p.start.year }}): {{ p.pm|pm }} CM</span>{% if not forloop.last %}; {% endif %}{% endif %}{% endfor %}{% else %}<a href="{{ i.app.get_absolute_url }}#team" class="muted">Add project dates and person-months</a>{% endif %}</td></tr>
   </tbody>
 </table>
 {% empty %}<p class="muted">None</p>
