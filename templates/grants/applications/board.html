@@ -1,0 +1,42 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}Board{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="titles"><h1>Pipeline board</h1>
+    <div class="subtitle">{% if user.can_edit %}Drag a card to change its status. Moving to <strong>Awarded</strong> opens the award setup.{% else %}Read-only view of the pipeline.{% endif %}</div></div>
+  <div class="actions">
+    <form method="get" class="inline-form">
+      <select name="funder" class="input-sm" x-data @change="$el.form.submit()" aria-label="Funder">
+        <option value="">All funders</option>
+        {% for f in funders %}<option value="{{ f.pk }}" {% if request.GET.funder == f.pk|stringformat:'s' %}selected{% endif %}>{{ f.display_name }}</option>{% endfor %}
+      </select>
+      {% if show_all %}<input type="hidden" name="all" value="1">{% endif %}
+    </form>
+    <a class="btn" href="?{% if not show_all %}all=1{% endif %}">{% if show_all %}Hide closed columns{% else %}Show all columns{% endif %}</a>
+    <a class="btn" href="{% url 'grants:application_list' %}">{% icon 'rows-3' %} List</a>
+  </div>
+</div>
+<div class="board">
+  {% for col in columns %}
+  <section class="column" aria-label="{{ col.label }}">
+    <div class="column-head">{% status_badge col.status col.label %}<span class="count" data-count>{{ col.items|length }}</span></div>
+    <div class="column-body" data-sortable-status="{{ col.status }}" {% if not user.can_edit %}data-readonly{% endif %}>
+      {% for app in col.items %}
+      <article class="kcard" data-id="{{ app.pk }}" data-status-url="{% url 'grants:application_status' app.pk %}">
+        <a class="k-title" href="{{ app.get_absolute_url }}">{{ app.display_title }}</a>
+        <div class="k-meta">
+          {% if app.funder %}<span>{{ app.funder.display_name }}{% if app.mechanism %} {{ app.mechanism }}{% endif %}</span>{% endif %}
+          {% if app.status_group == 'preparing' and app.sponsor_deadline %}<span class="due {{ app.sponsor_deadline|due_class }}">{% icon 'clock' 12 %} {{ app.sponsor_deadline|date:"M j" }}</span>{% endif %}
+          {% if app.status_group == 'pending' and app.council_date %}<span>{% icon 'calendar' 12 %} {{ app.council_date|date:"M Y" }}</span>{% endif %}
+          {% if app.requested_total %}<span>{{ app.requested_total|money_short }}</span>{% endif %}
+          {% if app.percentile is not None %}<span>{{ app.percentile|num }}%ile</span>{% endif %}
+          {% if app.open_tasks %}<span title="Open tasks">{% icon 'list-checks' 12 %} {{ app.open_tasks }}</span>{% endif %}
+          {% if app.is_starred %}<span style="color:var(--series-4)">{% icon 'star' 12 %}</span>{% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

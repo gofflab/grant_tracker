@@ -1,0 +1,4 @@
+{% extends base_template %}{% load gt %}
+{% block form_body %}
+<div class="alert bad">{% icon 'triangle-alert' %}<div><strong>Delete “{{ object }}”?</strong><br>{{ warning|default:"This can't be undone." }}</div></div>
+{% endblock %}

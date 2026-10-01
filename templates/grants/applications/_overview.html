@@ -1,0 +1,122 @@
+{% load gt humanize %}<div class="grid grid-main">
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h2>Details</h2></div>
+      <div class="card-body">
+        <dl class="dl">
+          <dt>Full title</dt><dd>{{ app.title }}</dd>
+          <dt>Funder</dt><dd>{{ app.funder.name|default:"—" }}{% if app.sponsor_unit %} · {{ app.sponsor_unit }}{% endif %}</dd>
+          {% if app.opportunity %}<dt>Opportunity</dt><dd><a href="{{ app.opportunity.get_absolute_url }}">{{ app.opportunity.title }}</a>{% if app.opportunity.number %} <span class="muted">({{ app.opportunity.number }})</span>{% endif %}</dd>{% endif %}
+          <dt>Mechanism</dt><dd>{{ app.mechanism|default:"—" }}{% if app.announcement_number %} · {{ app.announcement_number }}{% endif %}</dd>
+          <dt>My role</dt><dd>{{ app.get_role_display }}{% if app.contact_pi %} · Contact PI: {{ app.contact_pi }}{% endif %}</dd>
+          {% if app.lead_institution %}<dt>Lead institution</dt><dd>{{ app.lead_institution }}</dd>{% endif %}
+          {% if app.parent %}<dt>Previous submission</dt><dd><a href="{{ app.parent.get_absolute_url }}">{{ app.parent.display_title }}</a> {% status_badge app.parent %}</dd>{% endif %}
+          <dt>Identifiers</dt><dd>
+            {% if app.sponsor_id or app.internal_id or app.tracking_number %}
+              {% if app.sponsor_id %}<span class="mono">{{ app.sponsor_id }}</span> <span class="muted small">sponsor</span><br>{% endif %}
+              {% if app.internal_id %}<span class="mono">{{ app.internal_id }}</span> <span class="muted small">institutional</span><br>{% endif %}
+              {% if app.tracking_number %}<span class="mono">{{ app.tracking_number }}</span> <span class="muted small">portal</span>{% endif %}
+            {% else %}—{% endif %}
+          </dd>
+          <dt>Budget requested</dt><dd>
+            {% if app.requested_total or app.requested_direct_total %}
+            {{ app.requested_total|money }} total{% if app.requested_direct_total %} · {{ app.requested_direct_total|money }} direct{% endif %}{% if app.requested_direct_y1 %} · {{ app.requested_direct_y1|money }} direct yr 1{% endif %}
+            {% if app.duration_years %} · {{ app.duration_years }} yr{% endif %}{% if app.fa_rate %} · F&amp;A {{ app.fa_rate|num:1 }}%{% endif %}
+            {% else %}—{% endif %}
+          </dd>
+          <dt>Proposed period</dt><dd>{% if app.proposed_start %}{{ app.proposed_start|date:"M j, Y" }} – {{ app.proposed_end|date:"M j, Y"|default:"?" }}{% else %}—{% endif %}</dd>
+          {% if app.probability is not None %}<dt>Funding chance</dt><dd>{{ app.probability }}%{% if app.expected_value %} · weighted {{ app.expected_value|money_short }}{% endif %}</dd>{% endif %}
+          {% if app.program_officer %}<dt>Program officer</dt><dd>{{ app.program_officer }}{% if app.program_officer.email %} · <a href="mailto:{{ app.program_officer.email }}">{{ app.program_officer.email }}</a>{% endif %}</dd>{% endif %}
+          {% if app.grants_admin %}<dt>Grants administrator</dt><dd>{{ app.grants_admin }}{% if app.grants_admin.email %} · <a href="mailto:{{ app.grants_admin.email }}">{{ app.grants_admin.email }}</a>{% endif %}</dd>{% endif %}
+          {% if app.folder_url or app.portal_url %}<dt>Links</dt><dd>
+            {% if app.folder_url %}<a href="{{ app.folder_url }}" target="_blank" rel="noopener">{% icon 'folder' 14 %} Working folder {% icon 'external-link' 12 %}</a><br>{% endif %}
+            {% if app.portal_url %}<a href="{{ app.portal_url }}" target="_blank" rel="noopener">{% icon 'link' 14 %} Sponsor portal / NOFO {% icon 'external-link' 12 %}</a>{% endif %}
+          </dd>{% endif %}
+          {% for k, v in app.extra.items %}<dt>{{ k }}</dt><dd>{{ v|urlize }}</dd>{% endfor %}
+        </dl>
+      </div>
+    </div>
+
+    {% if app.abstract or app.major_goals %}
+    <div class="card">
+      <div class="card-head"><h2>Science</h2></div>
+      <div class="card-body prose">
+        {% if app.abstract %}<div class="label">Abstract / summary</div>{{ app.abstract|markdown }}{% endif %}
+        {% if app.major_goals %}<div class="label mt-2">Major goals</div>{{ app.major_goals|markdown }}{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if app.notes or app.lessons_learned %}
+    <div class="card">
+      <div class="card-head"><h2>Notes</h2></div>
+      <div class="card-body prose">
+        {% if app.notes %}{{ app.notes|markdown }}{% endif %}
+        {% if app.lessons_learned %}<div class="label mt-2">Lessons learned / resubmission strategy</div>{{ app.lessons_learned|markdown }}{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h2>Key dates</h2></div>
+      <div class="card-body">
+        <dl class="dl">
+          {% if app.loi_deadline %}<dt>LOI due</dt><dd><span class="due {% if app.status_group == 'preparing' %}{{ app.loi_deadline|due_class }}{% endif %}">{{ app.loi_deadline|date:"D, M j, Y" }}</span></dd>{% endif %}
+          <dt>Internal deadline</dt><dd>{% if app.internal_deadline %}<span class="due {% if app.status_group == 'preparing' %}{{ app.internal_deadline|due_class }}{% endif %}">{{ app.internal_deadline|date:"D, M j, Y" }}</span>{% else %}—{% endif %}</dd>
+          <dt>Sponsor deadline</dt><dd>{% if app.sponsor_deadline %}<span class="due {% if app.status_group == 'preparing' %}{{ app.sponsor_deadline|due_class }}{% endif %}">{{ app.sponsor_deadline|date:"D, M j, Y" }}</span>{% else %}—{% endif %}</dd>
+          <dt>Submitted</dt><dd>{{ app.submitted_on|date:"M j, Y"|default:"—" }}</dd>
+          {% if app.review_date or app.status_group != 'preparing' %}<dt>Review</dt><dd>{{ app.review_date|date:"M j, Y"|default:"—" }}{% if app.review_panel %} · {{ app.review_panel }}{% endif %}</dd>{% endif %}
+          {% if app.council_date %}<dt>Council / decision</dt><dd>{{ app.council_date|date:"M Y" }}</dd>{% endif %}
+          {% if app.decision_on %}<dt>Decision</dt><dd>{{ app.decision_on|date:"M j, Y" }}</dd>{% endif %}
+        </dl>
+      </div>
+    </div>
+
+    {% if app.impact_score is not None or app.percentile is not None or app.review_outcome %}
+    <div class="card">
+      <div class="card-head"><h2>Review outcome</h2></div>
+      <div class="card-body">
+        <div class="row wrap" style="gap:24px">
+          {% if app.impact_score is not None %}<div><div class="stat-label">Score</div><div class="stat-value">{{ app.impact_score|num }}</div></div>{% endif %}
+          {% if app.percentile is not None %}<div><div class="stat-label">Percentile</div><div class="stat-value">{{ app.percentile|num }}</div></div>{% endif %}
+        </div>
+        {% if app.review_outcome %}<p class="mt-1 mb-0">{{ app.get_review_outcome_display }}{% if app.payline_note %} · {{ app.payline_note }}{% endif %}</p>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if lineage %}
+    <div class="card">
+      <div class="card-head"><h2>Submission history</h2></div>
+      <ul class="list">
+        {% for a in lineage %}
+        <li {% if a.pk == app.pk %}style="background:var(--accent-soft)"{% endif %}>
+          <div class="grow"><a class="title" href="{{ a.get_absolute_url }}">{{ a.display_title }}</a>
+            <div class="meta"><span>{{ a.get_submission_type_display }}</span><span>{{ a.submitted_on|date:"M Y"|default:"not submitted" }}</span>{% if a.percentile is not None %}<span>{{ a.percentile|num }}%ile</span>{% endif %}</div></div>
+          {% status_badge a %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-head"><h2>Status history</h2></div>
+      <div class="card-body">
+        {% if status_changes %}
+        <ul class="timeline">
+          {% for sc in status_changes %}
+          <li><span class="dot">{% icon 'flag' %}</span>
+            {% status_badge sc.to_status sc.get_to_status_display %}
+            <div class="when">{{ sc.changed_at|date:"M j, Y" }}{% if sc.changed_by %} · {{ sc.changed_by }}{% endif %}</div>
+            {% if sc.note %}<div class="small ink-2">{{ sc.note }}</div>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}<p class="muted mb-0">Created {{ app.created_at|date:"M j, Y" }}. Status changes are logged here.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>

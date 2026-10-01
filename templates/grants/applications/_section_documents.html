@@ -1,0 +1,15 @@
+{% load gt %}<div id="section-documents" hx-get="{% url 'grants:application_section' app.pk 'documents' %}" hx-trigger="refresh-documents from:body" hx-swap="outerHTML">
+<div class="card">
+  <div class="card-head">
+    <h2>Documents</h2><span class="muted small">Stored securely in the database</span>
+    {% if user.can_edit %}<div class="actions"><button class="btn sm primary" hx-get="{% url 'grants:document_create' %}?application={{ app.pk }}" hx-target="#modal">{% icon 'upload' 14 %} Add document</button></div>{% endif %}
+  </div>
+  {% if documents %}
+  <ul class="list">
+    {% for d in documents %}{% include "grants/documents/_row.html" %}{% endfor %}
+  </ul>
+  {% else %}
+  <div class="empty">{% icon 'file-up' 28 %}<h3>No documents</h3><p>Keep the final submitted versions (Aims, Strategy, budget, biosketches) and the summary statement here.</p></div>
+  {% endif %}
+</div>
+</div>

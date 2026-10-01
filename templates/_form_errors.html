@@ -1,0 +1,1 @@
+{% load gt %}{% if form.non_field_errors %}<div class="alert bad">{% icon 'triangle-alert' %}<div>{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div></div>{% endif %}

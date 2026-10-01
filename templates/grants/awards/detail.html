@@ -1,0 +1,105 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}{{ award }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="titles">
+    <div class="crumbs"><a href="{% url 'grants:award_list' %}">Awards</a> {% icon 'chevron-right' 12 %} <a href="{{ app.get_absolute_url }}">{{ app.display_title }}</a></div>
+    <h1>{{ app.display_title }}</h1>
+    <div class="row wrap mt-1">
+      {% status_badge award.status award.get_status_display 'a' %}
+      {% if award.award_number %}<span class="badge plain mono">{{ award.award_number }}</span>{% endif %}
+      {% if app.funder %}<span class="badge plain">{{ app.funder.display_name }}{% if app.sponsor_unit %} · {{ app.sponsor_unit }}{% endif %}</span>{% endif %}
+      <span class="badge plain">{{ award.get_reporting_display }}</span>
+    </div>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ app.get_absolute_url }}">{% icon 'file-text' %} Application</a>
+    {% if user.can_edit %}
+    <button class="btn" hx-post="{% url 'grants:award_regenerate' award.pk %}" hx-confirm="Recalculate reporting tasks from the current award dates? Completed tasks are not touched.">{% icon 'refresh-cw' %} Refresh reporting schedule</button>
+    <a class="btn primary" href="{% url 'grants:award_edit' award.pk %}">{% icon 'pencil' %} Edit award</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-label">Project period</div><div class="stat-value" style="font-size:18px">{{ award.start_date|date:"M Y"|default:"?" }} – {{ award.effective_end|date:"M Y"|default:"?" }}</div>
+    {% if award.percent_elapsed is not None %}<div class="progress mt-1 {% if award.percent_elapsed > 85 %}warn{% endif %}"><span style="width:{{ award.percent_elapsed }}%"></span></div><div class="stat-sub">{{ award.percent_elapsed }}% elapsed{% if award.days_remaining is not None and award.days_remaining >= 0 %} · ends {{ award.effective_end|days_until }}{% endif %}</div>{% endif %}</div>
+  <div class="stat"><div class="stat-label">Total award</div><div class="stat-value">{{ award.awarded_total|money_short }}</div><div class="stat-sub">{{ award.awarded_direct_total|money_short }} direct{% if award.fa_rate %} · F&amp;A {{ award.fa_rate|num:1 }}%{% endif %}</div></div>
+  <div class="stat"><div class="stat-label">Current budget year</div><div class="stat-value">{% if current %}Year {{ current.number }}{% else %}—{% endif %}</div><div class="stat-sub">{% if current %}{{ current.direct_costs|money_short }} direct · {{ current.start_date|date:"M j" }} – {{ current.end_date|date:"M j, Y" }}{% else %}No budget year covers today{% endif %}</div></div>
+  <div class="stat"><div class="stat-label">Open reporting items</div><div class="stat-value">{{ open_reports|length }}</div><div class="stat-sub">{% with nxt=open_reports.0 %}{% if nxt %}Next: {{ nxt.title|truncatechars:26 }} {{ nxt.due_date|date:"M j" }}{% else %}Nothing outstanding{% endif %}{% endwith %}</div></div>
+</div>
+
+<div class="grid grid-main">
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h2>Budget years</h2>{% if user.can_edit %}<div class="actions"><button class="btn sm" hx-get="{% url 'grants:period_create' award.pk %}" hx-target="#modal">{% icon 'plus' 14 %} Add year</button></div>{% endif %}</div>
+      {% if periods %}
+      <div class="table-wrap"><table class="table">
+        <thead><tr><th>Year</th><th>Period</th><th>Status</th><th class="num">Direct</th><th class="num">F&amp;A</th><th class="num">Total</th><th>Spent</th><th></th></tr></thead>
+        <tbody>{% for p in periods %}
+          <tr {% if p.is_current %}style="background:var(--accent-soft)"{% endif %}>
+            <td><strong>{{ p.number }}</strong>{% if p.is_current %} <span class="badge plain">Current</span>{% endif %}</td>
+            <td class="nowrap small">{{ p.start_date|date:"M j, Y" }} – {{ p.end_date|date:"M j, Y" }}</td>
+            <td>{% if p.status == 'awarded' %}<span class="badge s-awarded">NoA{% if p.noa_date %} {{ p.noa_date|date:"M j" }}{% endif %}</span>{% else %}<span class="badge">Projected</span>{% endif %}</td>
+            <td class="num">{{ p.direct_costs|money }}</td>
+            <td class="num">{{ p.indirect_costs|money }}</td>
+            <td class="num">{{ p.total|money }}</td>
+            <td style="min-width:110px">{% if p.burn_percent is not None %}<div class="progress {% if p.burn_percent > 100 %}bad{% elif p.burn_percent > 90 %}warn{% endif %}"><span style="width:{% if p.burn_percent > 100 %}100{% else %}{{ p.burn_percent }}{% endif %}%"></span></div><span class="small muted">{{ p.spent_to_date|money_short }} · {{ p.burn_percent }}%</span>{% else %}<span class="muted small">—</span>{% endif %}</td>
+            <td class="right nowrap">{% if user.can_edit %}<button class="btn ghost sm icon-only" hx-get="{% url 'grants:period_edit' p.pk %}" hx-target="#modal" aria-label="Edit year {{ p.number }}">{% icon 'pencil' 14 %}</button>{% endif %}</td>
+          </tr>{% endfor %}
+        </tbody>
+        <tfoot><tr><td colspan="3">Total</td><td class="num">{{ totals.direct|money }}</td><td class="num">{{ totals.indirect|money }}</td><td class="num">{{ totals.total|money }}</td><td>{% if totals.spent %}{{ totals.spent|money_short }}{% endif %}</td><td></td></tr></tfoot>
+      </table></div>
+      <div class="card-foot">Amounts start as an even split of the award. Update each year as Notices of Award arrive; enter spending from your monthly financial reports to track burn rate.</div>
+      {% else %}
+      <div class="empty"><p>No budget years yet. {% if user.can_edit %}<a href="{% url 'grants:award_edit' award.pk %}">Set the project dates</a> and generate them.{% endif %}</p></div>
+      {% endif %}
+    </div>
+
+    <div class="card" id="section-tasks" hx-get="{{ request.path }}" hx-select="#section-tasks" hx-trigger="refresh-tasks from:body" hx-swap="outerHTML">
+      <div class="card-head"><h2>Reporting &amp; follow-up</h2>
+        {% if user.can_edit %}<div class="actions"><button class="btn sm" hx-get="{% url 'grants:task_create' %}?application={{ app.pk }}&category=reporting" hx-target="#modal">{% icon 'plus' 14 %} Add item</button></div>{% endif %}</div>
+      {% if open_reports or done_reports %}
+      <ul class="list">{% for t in open_reports %}{% include "grants/tasks/_row.html" %}{% endfor %}</ul>
+      {% if done_reports %}<details style="border-top:1px solid var(--border)"><summary class="muted small" style="padding:10px 16px;cursor:pointer">{{ done_reports|length }} completed</summary>
+        <ul class="list">{% for t in done_reports %}{% include "grants/tasks/_row.html" %}{% endfor %}</ul></details>{% endif %}
+      {% else %}
+      <div class="empty"><p>No reporting items. Set the project dates and reporting schedule, then use <em>Refresh reporting schedule</em>.</p></div>
+      {% endif %}
+      <div class="card-foot">Progress reports, financial reports, effort certification, IRB/IACUC renewals and personnel tasks appear here. Generated NIH dates follow standard rules; confirm each against your Notice of Award.</div>
+    </div>
+  </div>
+
+  <div class="stack">
+    <div class="card"><div class="card-head"><h2>Award details</h2></div><div class="card-body">
+      <dl class="dl">
+        <dt>Award number</dt><dd class="mono">{{ award.award_number|default:"—" }}</dd>
+        <dt>Notice of award</dt><dd>{{ award.notice_date|date:"M j, Y"|default:"—" }}</dd>
+        <dt>Project period</dt><dd>{{ award.start_date|date:"M j, Y"|default:"?" }} – {{ award.end_date|date:"M j, Y"|default:"?" }}</dd>
+        {% if award.nce_end_date %}<dt>Extended to</dt><dd>{{ award.nce_end_date|date:"M j, Y" }} <span class="badge a-nce plain">NCE</span></dd>{% endif %}
+        <dt>Account</dt><dd class="mono">{{ award.account_number|default:"—" }}</dd>
+        <dt>Program officer</dt><dd>{{ app.program_officer|default:"—" }}</dd>
+        <dt>Grants specialist</dt><dd>{{ award.grants_specialist|default:"—" }}{% if award.grants_specialist.email %}<br><a href="mailto:{{ award.grants_specialist.email }}">{{ award.grants_specialist.email }}</a>{% endif %}</dd>
+      </dl>
+      {% if award.terms %}<div class="label mt-2">Terms &amp; restrictions</div><div class="prose small">{{ award.terms|markdown }}</div>{% endif %}
+      {% if award.notes %}<div class="label mt-2">Notes</div><div class="prose small">{{ award.notes|markdown }}</div>{% endif %}
+    </div></div>
+
+    <div class="card">
+      <div class="card-head"><h2>Personnel effort</h2><div class="actions"><a class="btn ghost sm" href="{{ app.get_absolute_url }}#team">Edit</a></div></div>
+      {% if personnel %}
+      <ul class="list">{% for p in personnel %}
+        <li><div class="grow"><span class="title">{{ p.person }}</span><div class="meta"><span>{{ p.get_role_display }}</span></div></div>
+          <span class="tnum">{{ p.person_months|pm }} PM{% if p.effort_percent is not None %} <span class="muted small">({{ p.effort_percent|num:0 }}%)</span>{% endif %}</span></li>
+      {% endfor %}</ul>
+      {% else %}<div class="empty"><p>No personnel recorded.</p></div>{% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Award documents</h2>{% if user.can_edit %}<div class="actions"><button class="btn sm" hx-get="{% url 'grants:document_create' %}?application={{ app.pk }}&category=noa" hx-target="#modal">{% icon 'upload' 14 %} Upload</button></div>{% endif %}</div>
+      {% if documents %}<ul class="list">{% for d in documents %}{% include "grants/documents/_row.html" %}{% endfor %}</ul>
+      {% else %}<div class="empty"><p>Notices of award, progress reports and financial reports appear here.</p></div>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,164 @@
+{% extends "base.html" %}{% load gt humanize %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="titles">
+    <h1>Welcome back{% if user.first_name %}, {{ user.first_name }}{% endif %}</h1>
+    <div class="subtitle">{{ today|date:"l, F j, Y" }}{% if kpi.overdue %} · <a href="{% url 'grants:task_list' %}" class="due-overdue">{{ kpi.overdue }} overdue task{{ kpi.overdue|pluralize }}</a>{% endif %}</div>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{% url 'grants:application_board' %}">{% icon 'square-kanban' %} Board</a>
+    {% if user.can_edit %}<a class="btn primary" href="{% url 'grants:application_create' %}">{% icon 'plus' %} New application</a>{% endif %}
+  </div>
+</div>
+
+{% if is_empty %}
+<div class="card mb-2">
+  <div class="card-head"><h2>Get started</h2></div>
+  <div class="card-body">
+    <div class="grid grid-4">
+      <a class="stat" href="{% url 'grants:opportunity_create' %}"><div class="stat-label">{% icon 'target' %} Step 1</div><div style="font-weight:600;margin-top:4px">Track an opportunity</div><div class="stat-sub">An RFA, NOFO or foundation call you're watching</div></a>
+      <a class="stat" href="{% url 'grants:application_create' %}"><div class="stat-label">{% icon 'file-text' %} Step 2</div><div style="font-weight:600;margin-top:4px">Add an application</div><div class="stat-sub">Apply a checklist to generate tasks from the deadline</div></a>
+      <a class="stat" href="{% url 'grants:import' %}"><div class="stat-label">{% icon 'import' %} Step 3</div><div style="font-weight:600;margin-top:4px">Import your history</div><div class="stat-sub">Past submissions from a spreadsheet, for success-rate trends</div></a>
+      <a class="stat" href="{% url 'accounts:profile' %}"><div class="stat-label">{% icon 'shield-check' %} Step 4</div><div style="font-weight:600;margin-top:4px">Secure &amp; subscribe</div><div class="stat-sub">Turn on 2FA and add the calendar feed to Google Calendar</div></a>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="stats">
+  <a class="stat" href="{% url 'grants:award_list' %}">
+    <div class="stat-label">{% icon 'award' 14 %} Active awards</div>
+    <div class="stat-value">{{ kpi.active_awards }}</div>
+    <div class="stat-sub">{{ kpi.current_direct|money_short }} direct this budget year</div>
+  </a>
+  <a class="stat" href="{% url 'grants:application_list' %}?group=pending">
+    <div class="stat-label">{% icon 'hourglass' 14 %} Pending decisions</div>
+    <div class="stat-value">{{ kpi.pending_count }}</div>
+    <div class="stat-sub">{{ kpi.pending_total|money_short }} requested</div>
+  </a>
+  <a class="stat" href="{% url 'grants:application_list' %}?group=preparing">
+    <div class="stat-label">{% icon 'pencil' 14 %} In preparation</div>
+    <div class="stat-value">{{ kpi.preparing_count }}</div>
+    <div class="stat-sub">{% if kpi.next_due %}Next due {{ kpi.next_due.sponsor_deadline|date:"M j" }} · {{ kpi.next_due.display_title|truncatechars:22 }}{% else %}No upcoming deadlines{% endif %}</div>
+  </a>
+  <a class="stat" href="{% url 'grants:analytics' %}">
+    <div class="stat-label">{% icon 'percent' 14 %} Success rate, 5 yr</div>
+    <div class="stat-value">{% if kpi.success_rate is not None %}{{ kpi.success_rate }}%{% else %}—{% endif %}</div>
+    <div class="stat-sub">{{ kpi.awarded_n }} of {{ kpi.decided_n }} decided</div>
+  </a>
+  <a class="stat" href="{% url 'grants:application_list' %}?group=open&amp;sort=amount" title="Sum of requested total × your estimated probability, for open applications">
+    <div class="stat-label">{% icon 'dollar-sign' 14 %} Weighted pipeline</div>
+    <div class="stat-value">{{ kpi.weighted|money_short }}</div>
+    <div class="stat-sub">of {{ kpi.unweighted|money_short }} requested</div>
+  </a>
+</div>
+
+<div class="grid grid-main">
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h2>Next 45 days</h2><div class="actions"><a class="btn ghost sm" href="{% url 'grants:calendar' %}">{% icon 'calendar' 14 %} Calendar</a></div></div>
+      {% if upcoming %}
+      <ul class="list">
+        {% for e in upcoming %}
+        <li>
+          <span class="date-pill {{ e.date|due_class }}"><span class="m">{{ e.date|date:"M" }}</span><span class="d">{{ e.date|date:"j" }}</span></span>
+          <div class="grow">
+            <a class="title" href="{{ e.url }}">{{ e.title }}</a>
+            <div class="meta"><span class="cal-ev ev-{{ e.kind }}" style="display:inline-block;margin:0">{{ e.kind_label }}</span>{% if e.subtitle %}<span>{{ e.subtitle }}</span>{% endif %}<span>{{ e.date|days_until }}</span></div>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="empty">{% icon 'calendar-clock' 28 %}<h3>Nothing due soon</h3><p>Deadlines, reports and task due dates appear here.</p></div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Funding runway</h2><span class="muted small">Total costs per calendar year, active awards</span></div>
+      <div class="card-body">
+        {% if has_awards or runway.series %}
+        <div class="chart-box"><canvas data-chart="runway-data" role="img" aria-label="Funding by year from active awards"></canvas></div>
+        <script type="application/json" id="runway-data">{{ runway_spec|safe }}</script>
+        <p class="chart-note">Uses budget periods where entered, otherwise spreads the award evenly. Where the bars drop off is when to plan renewals.</p>
+        {% include "grants/_chart_table.html" with labels=runway.labels rows=runway.table fmt="money" %}
+        {% else %}
+        <div class="empty">{% icon 'chart-column' 28 %}<h3>No active awards yet</h3><p>When an application is marked Awarded, its funding by year shows here.</p></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Recent activity</h2></div>
+      {% if activity %}
+      <ul class="list">
+        {% for a in activity %}
+        <li>
+          <span class="avatar sm">{{ a.actor.initials|default:"·" }}</span>
+          <div class="grow">
+            <span class="ink-2">{{ a.description }}</span>
+            <div class="meta">{% if a.application %}<a href="{{ a.application.get_absolute_url }}">{{ a.application.display_title }}</a>{% endif %}<span>{{ a.created_at|naturaltime }}</span></div>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<div class="empty"><p>No activity yet.</p></div>{% endif %}
+    </div>
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h2>My tasks</h2><div class="actions"><a class="btn ghost sm" href="{% url 'grants:task_list' %}?view=mine">All</a></div></div>
+      {% if my_tasks %}
+      <ul class="list" id="dash-tasks">
+        {% for t in my_tasks %}{% include "grants/tasks/_row.html" with show_app=True %}{% endfor %}
+      </ul>
+      {% else %}
+      <div class="empty"><p>No open tasks assigned to you.</p></div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Pipeline</h2><div class="actions"><a class="btn ghost sm" href="{% url 'grants:application_board' %}">Board</a></div></div>
+      <ul class="list">
+        {% for status, label, n in pipeline %}
+        <li style="padding:7px 16px">
+          <span class="badge s-{{ status }}">{{ label }}</span>
+          <span class="spacer"></span>
+          <a href="{% url 'grants:application_list' %}?status={{ status }}" class="tnum" style="font-weight:600;color:var(--ink)">{{ n }}</a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    {% if ending %}
+    <div class="card">
+      <div class="card-head"><h2>Awards ending within a year</h2></div>
+      <ul class="list">
+        {% for a in ending %}
+        <li>
+          <div class="grow">
+            <a class="title" href="{{ a.get_absolute_url }}">{{ a.application.display_title }}</a>
+            <div class="meta"><span>{{ a.award_number|default:"No award number" }}</span><span class="{% if a.days_remaining < 180 %}due-soon{% endif %}">ends {{ a.effective_end|date:"M j, Y" }} ({{ a.effective_end|days_until }})</span></div>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if starred %}
+    <div class="card">
+      <div class="card-head"><h2>Starred</h2></div>
+      <ul class="list">
+        {% for app in starred %}
+        <li><div class="grow"><a class="title" href="{{ app.get_absolute_url }}">{{ app.display_title }}</a>
+          <div class="meta">{% status_badge app %}<span>{{ app.funder|default:"" }} {{ app.mechanism }}</span></div></div></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

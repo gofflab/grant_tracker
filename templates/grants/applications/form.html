@@ -1,0 +1,117 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="titles">
+    <div class="crumbs"><a href="{% url 'grants:application_list' %}">Applications</a>{% if app %} {% icon 'chevron-right' 12 %} <a href="{{ app.get_absolute_url }}">{{ app.display_title }}</a>{% endif %}</div>
+    <h1>{{ title }}</h1>
+    <div class="subtitle">Only the title is required. Fill in the rest as you go.</div>
+  </div>
+</div>
+<form method="post" class="card" style="max-width:1100px">{% csrf_token %}
+  <div class="card-body">
+    {% include "_form_errors.html" %}
+    <div class="form-grid">
+      <div class="fieldset-title">Basics</div>
+      {% include "_field.html" with field=form.title span="span-8" %}
+      {% include "_field.html" with field=form.short_name span="span-4" %}
+      {% if form.initial_status %}{% include "_field.html" with field=form.initial_status span="span-3" %}{% endif %}
+      {% include "_field.html" with field=form.submission_type span="span-3" %}
+      {% include "_field.html" with field=form.parent span="span-3" %}
+      {% include "_field.html" with field=form.priority span="span-3" %}
+
+      <div class="fieldset-title">Sponsor</div>
+      {% include "_field.html" with field=form.opportunity span="span-12" %}
+      {% include "_field.html" with field=form.funder span="span-4" %}
+      {% include "_field.html" with field=form.sponsor_unit span="span-4" %}
+      {% include "_field.html" with field=form.mechanism span="span-4" %}
+      {% include "_field.html" with field=form.announcement_number span="span-4" %}
+      {% include "_field.html" with field=form.program_officer span="span-4" %}
+      {% include "_field.html" with field=form.grants_admin span="span-4" %}
+
+      <div class="fieldset-title">Role</div>
+      {% include "_field.html" with field=form.role span="span-4" %}
+      {% include "_field.html" with field=form.contact_pi span="span-4" %}
+      {% include "_field.html" with field=form.lead_institution span="span-4" %}
+
+      <div class="fieldset-title">Deadlines &amp; dates</div>
+      {% include "_field.html" with field=form.loi_deadline span="span-3" %}
+      {% include "_field.html" with field=form.internal_deadline span="span-3" %}
+      {% include "_field.html" with field=form.sponsor_deadline span="span-3" %}
+      {% include "_field.html" with field=form.submitted_on span="span-3" %}
+      {% include "_field.html" with field=form.review_date span="span-3" %}
+      {% include "_field.html" with field=form.council_date span="span-3" %}
+      {% include "_field.html" with field=form.decision_on span="span-3" %}
+      <div class="field span-3"></div>
+      {% include "_field.html" with field=form.proposed_start span="span-3" %}
+      {% include "_field.html" with field=form.proposed_end span="span-3" %}
+      {% include "_field.html" with field=form.duration_years span="span-3" %}
+
+      <div class="fieldset-title">Budget</div>
+      {% include "_field.html" with field=form.requested_direct_y1 span="span-3" %}
+      {% include "_field.html" with field=form.requested_direct_total span="span-3" %}
+      {% include "_field.html" with field=form.requested_total span="span-3" %}
+      {% include "_field.html" with field=form.fa_rate span="span-3" %}
+      {% include "_field.html" with field=form.probability span="span-4" %}
+
+      <div class="fieldset-title">Identifiers &amp; links</div>
+      {% include "_field.html" with field=form.sponsor_id span="span-4" %}
+      {% include "_field.html" with field=form.internal_id span="span-4" %}
+      {% include "_field.html" with field=form.tracking_number span="span-4" %}
+      {% include "_field.html" with field=form.folder_url %}
+      {% include "_field.html" with field=form.portal_url %}
+
+      <div class="fieldset-title">Review</div>
+      {% include "_field.html" with field=form.review_panel span="span-3" %}
+      {% include "_field.html" with field=form.review_outcome span="span-3" %}
+      {% include "_field.html" with field=form.impact_score span="span-3" %}
+      {% include "_field.html" with field=form.percentile span="span-3" %}
+      {% include "_field.html" with field=form.payline_note span="span-12" %}
+
+      <div class="fieldset-title">Science &amp; notes</div>
+      {% include "_field.html" with field=form.abstract span="span-12" %}
+      {% include "_field.html" with field=form.major_goals span="span-12" %}
+      {% include "_field.html" with field=form.notes %}
+      {% include "_field.html" with field=form.lessons_learned %}
+
+      <div class="fieldset-title">Tags &amp; custom fields</div>
+      <div class="field span-6">
+        <label>Tags</label>
+        <div class="chips">{% for cb in form.tags %}<label class="chip chip-gray" style="cursor:pointer">{{ cb.tag }} {{ cb.choice_label }}</label>{% empty %}<span class="muted small">No tags yet. Add some below.</span>{% endfor %}</div>
+      </div>
+      {% include "_field.html" with field=form.new_tags %}
+      {% include "_field.html" with field=form.is_starred span="span-12" %}
+
+      <div class="field span-12" x-data="kvEditor('{{ form.extra.auto_id }}')">
+        {{ form.extra }}
+        <label>Custom fields</label>
+        <span class="help">Anything specific to this funder (e.g. Foundation program, Cayuse ID, Nomination deadline).</span>
+        <template x-for="(row, i) in rows" :key="i">
+          <div class="kv-row">
+            <input class="input" type="text" placeholder="Field" x-model="row.key" aria-label="Field name">
+            <input class="input" type="text" placeholder="Value" x-model="row.value" aria-label="Field value">
+            <button type="button" class="btn ghost icon-only" @click="remove(i)" aria-label="Remove field">{% icon 'x' %}</button>
+          </div>
+        </template>
+        <div><button type="button" class="btn sm" @click="add()">{% icon 'plus' 14 %} Add field</button></div>
+      </div>
+
+      {% if templates %}
+      <div class="fieldset-title">Checklist</div>
+      <div class="field span-6">
+        <label for="apply_template">Generate tasks from a template</label>
+        <select name="apply_template" id="apply_template">
+          <option value="">— None —</option>
+          {% for t in templates %}<option value="{{ t.pk }}">{{ t.name }}</option>{% endfor %}
+        </select>
+        <span class="help">Due dates count back from the sponsor deadline, shifted off weekends.</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="form-actions" style="padding:14px 16px;margin:0;position:sticky;bottom:0;background:var(--surface);border-radius:0 0 var(--radius) var(--radius)">
+    <a class="btn ghost" href="{% if app %}{{ app.get_absolute_url }}{% else %}{% url 'grants:application_list' %}{% endif %}">Cancel</a>
+    <button type="submit" class="btn primary">{% if app %}Save changes{% else %}Create application{% endif %}</button>
+  </div>
+</form>
+{% endblock %}

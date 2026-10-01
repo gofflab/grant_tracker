@@ -1,0 +1,12 @@
+<div style="font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;font-size:14px;color:#141413;max-width:620px">
+  <p>Hi {{ user.first_name|default:user.username }},</p>
+  <p>{% if urgent %}Here's what's due in the next 2 days.{% else %}Here's your {{ site_name }} look-ahead for the next {{ days }} days.{% endif %}</p>
+  {% if overdue %}<h3 style="color:#c03232;font-size:15px;margin:18px 0 6px">Overdue tasks ({{ overdue|length }})</h3>
+  <ul style="padding-left:18px;margin:0">{% for t in overdue %}<li><a href="{{ site_url }}{% if t.application %}{{ t.application.get_absolute_url }}#tasks{% else %}/tasks/{% endif %}">{{ t.title }}</a>{% if t.application %} · {{ t.application.display_title }}{% endif %} <span style="color:#6f6e69">(due {{ t.due_date|date:"M j" }}{% if t.assignee %}, {{ t.assignee }}{% endif %})</span></li>{% endfor %}</ul>{% endif %}
+  {% if events %}<h3 style="font-size:15px;margin:18px 0 6px">Deadlines &amp; dates</h3>
+  <table style="border-collapse:collapse;width:100%">{% for e in events %}<tr><td style="padding:4px 10px 4px 0;white-space:nowrap;color:#52514e;vertical-align:top">{{ e.date|date:"D M j" }}</td><td style="padding:4px 0"><a href="{{ site_url }}{{ e.url }}">{{ e.title }}</a>{% if e.subtitle %} <span style="color:#6f6e69">· {{ e.subtitle }}</span>{% endif %}</td></tr>{% endfor %}</table>{% endif %}
+  {% if my_tasks %}<h3 style="font-size:15px;margin:18px 0 6px">Your tasks</h3>
+  <table style="border-collapse:collapse;width:100%">{% for t in my_tasks %}<tr><td style="padding:4px 10px 4px 0;white-space:nowrap;color:#52514e;vertical-align:top">{{ t.due_date|date:"D M j" }}</td><td style="padding:4px 0">{{ t.title }}{% if t.application %} <span style="color:#6f6e69">· {{ t.application.display_title }}</span>{% endif %}</td></tr>{% endfor %}</table>{% endif %}
+  <p style="margin-top:22px"><a href="{{ site_url }}/" style="background:#1c5cab;color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none">Open {{ site_name }}</a></p>
+  <p style="color:#6f6e69;font-size:12px">You can turn this email off under Profile &amp; security.</p>
+</div>

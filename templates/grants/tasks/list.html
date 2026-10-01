@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}Tasks{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="titles"><h1>Tasks</h1><div class="subtitle">Pre-submission checklists, progress reports and other follow-ups across every application.</div></div>
+  <div class="actions">{% if user.can_edit %}<button class="btn primary" hx-get="{% url 'grants:task_create' %}" hx-target="#modal">{% icon 'plus' %} New task</button>{% endif %}</div>
+</div>
+<form class="filters" hx-get="{% url 'grants:task_list' %}" hx-target="#task-body" hx-trigger="change, input delay:300ms from:input[type=search]" hx-push-url="true" hx-vals='{"partial": "1"}'>
+  <div class="btn-group" role="group">
+    <a class="btn sm {% if view == 'open' %}active{% endif %}" href="?view=open">All open</a>
+    <a class="btn sm {% if view == 'mine' %}active{% endif %}" href="?view=mine">Mine</a>
+    <a class="btn sm {% if view == 'post_award' %}active{% endif %}" href="?view=post_award">Post-award</a>
+    <a class="btn sm {% if view == 'done' %}active{% endif %}" href="?view=done">Done</a>
+  </div>
+  <input type="hidden" name="view" value="{{ view }}">
+  <select name="category" class="input-sm" aria-label="Category">
+    <option value="">All categories</option>
+    {% for v, l in categories %}<option value="{{ v }}" {% if request.GET.category == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+  </select>
+  <input type="search" name="q" class="input-sm" placeholder="Filter tasks…" value="{{ request.GET.q }}">
+</form>
+<div id="task-body" hx-get="{% url 'grants:task_list' %}?{{ request.GET.urlencode }}&partial=1" hx-trigger="refresh-tasks from:body" hx-swap="innerHTML">
+  {% include "grants/tasks/_list_body.html" %}
+</div>
+{% endblock %}

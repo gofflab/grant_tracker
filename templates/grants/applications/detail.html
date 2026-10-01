@@ -1,0 +1,102 @@
+{% extends "base.html" %}{% load gt humanize %}
+{% block title %}{{ app.display_title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="titles">
+    <div class="crumbs"><a href="{% url 'grants:application_list' %}">Applications</a>{% if app.funder %} {% icon 'chevron-right' 12 %} <a href="{% url 'grants:application_list' %}?funder={{ app.funder_id }}">{{ app.funder.display_name }}</a>{% endif %}</div>
+    <div class="row" style="align-items:flex-start">
+      <h1>{{ app.display_title }}</h1>
+      {% include "grants/applications/_star.html" %}
+    </div>
+    {% if app.short_name %}<div class="subtitle">{{ app.title }}</div>{% endif %}
+    <div class="row wrap mt-1">
+      {% status_badge app %}
+      <span class="badge plain">{{ app.get_submission_type_display }}{% if app.submission_type == 'resubmission' %} · {{ app.resubmission_label }}{% endif %}</span>
+      <span class="badge plain">{{ app.get_role_display }}</span>
+      {% if app.mechanism %}<span class="badge plain">{{ app.mechanism }}</span>{% endif %}
+      {% if app.priority == 'high' %}<span class="badge p-high plain">High priority</span>{% endif %}
+      {% for t in app.tags.all %}{% tag_chip t %}{% endfor %}
+    </div>
+  </div>
+  <div class="actions">
+    {% if user.can_edit %}
+    <div class="dropdown" x-data="{ open: false }" @click.outside="open = false">
+      <button class="btn primary" @click="open = !open">{% icon 'flag' %} Change status {% icon 'chevron-down' 14 %}</button>
+      <div class="menu" x-show="open" x-cloak style="max-height:60vh;overflow-y:auto">
+        {% for value, label in statuses %}
+        <a href="#" hx-get="{% url 'grants:application_status' app.pk %}?to={{ value }}" hx-target="#modal" @click="open = false"
+           {% if value == app.status %}aria-current="true" style="font-weight:650"{% endif %}>
+          <span class="badge s-{{ value }}" style="pointer-events:none">{{ label }}</span>{% if value == app.status %} {% icon 'check' 14 %}{% endif %}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    <a class="btn" href="{% url 'grants:application_edit' app.pk %}">{% icon 'pencil' %} Edit</a>
+    <div class="dropdown" x-data="{ open: false }" @click.outside="open = false">
+      <button class="btn icon-only" @click="open = !open" aria-label="More actions">{% icon 'ellipsis' %}</button>
+      <div class="menu" x-show="open" x-cloak>
+        <a href="#" hx-get="{% url 'grants:application_checklist' app.pk %}" hx-target="#modal" @click="open = false">{% icon 'list-checks' %} Apply checklist template</a>
+        <div class="sep"></div>
+        <button hx-post="{% url 'grants:application_clone' app.pk %}" hx-vals='{"kind": "resubmission"}' hx-confirm="Start a resubmission of this application?">{% icon 'repeat' %} Start resubmission</button>
+        <button hx-post="{% url 'grants:application_clone' app.pk %}" hx-vals='{"kind": "renewal"}' hx-confirm="Start a renewal (competing continuation)?">{% icon 'refresh-cw' %} Start renewal</button>
+        <button hx-post="{% url 'grants:application_clone' app.pk %}" hx-vals='{"kind": "copy"}' hx-confirm="Duplicate this application as a new, unrelated draft?">{% icon 'copy' %} Duplicate</button>
+        <div class="sep"></div>
+        <a href="{% url 'grants:application_history' app.pk %}">{% icon 'history' %} Change history</a>
+        {% if user.is_owner %}<a href="#" hx-get="{% url 'grants:application_delete' app.pk %}" hx-target="#modal" @click="open = false" class="danger">{% icon 'trash-2' %} Delete</a>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{# Contextual next step #}
+{% if app.status_group == 'preparing' and app.next_deadline %}
+<div class="alert {% if app.next_deadline.1|due_class == 'due-soon' or app.next_deadline.1|due_class == 'due-overdue' %}warn{% else %}info{% endif %}">
+  {% icon 'clock' %}
+  <div class="grow" style="flex:1"><strong>{{ app.next_deadline.0 }} deadline {{ app.next_deadline.1|days_until }}</strong> ({{ app.next_deadline.1|date:"D, M j" }}).
+    {% if section_tasks.task_total %}{{ section_tasks.done_tasks|length }} of {{ section_tasks.task_total }} tasks done.{% else %}No checklist yet. <a href="#" hx-get="{% url 'grants:application_checklist' app.pk %}" hx-target="#modal">Apply a template</a> to generate tasks back-scheduled from the deadline.{% endif %}
+  </div>
+  {% if section_tasks.task_total %}<div class="progress good alert-progress"><span style="width:{{ section_tasks.task_pct }}%"></span></div>{% endif %}
+</div>
+{% elif app.status == 'not_funded' and user.can_edit %}
+<div class="alert">
+  {% icon 'repeat' %}
+  <div style="flex:1">Not funded{% if app.decision_on %} ({{ app.decision_on|date:"M Y" }}){% endif %}. Record the reviews under <em>Reviews</em>, then start a resubmission that carries the team and details forward.</div>
+  <button class="btn sm" hx-post="{% url 'grants:application_clone' app.pk %}" hx-vals='{"kind": "resubmission"}'>Start resubmission</button>
+</div>
+{% elif app.status == 'awarded' %}
+<div class="alert good">
+  {% icon 'award' %}
+  {% if award %}
+  <div style="flex:1"><strong>Awarded{% if award.award_number %} · {{ award.award_number }}{% endif %}</strong>{% if award.start_date %} · {{ award.start_date|date:"M Y" }} to {{ award.effective_end|date:"M Y" }}{% endif %}{% if award.awarded_total %} · {{ award.awarded_total|money }}{% endif %}</div>
+  <a class="btn sm" href="{{ award.get_absolute_url }}">Award, budget &amp; reporting {% icon 'arrow-right' 14 %}</a>
+  {% else %}
+  <div style="flex:1">Marked awarded, but there's no award record yet.</div>
+  {% if user.can_edit %}<form method="post" action="{% url 'grants:award_create' app.pk %}">{% csrf_token %}<button class="btn sm">Create award record</button></form>{% endif %}
+  {% endif %}
+</div>
+{% elif app.status_group == 'pending' %}
+<div class="alert info">{% icon 'hourglass' %}<div style="flex:1">
+  Submitted {{ app.submitted_on|date:"M j, Y"|default:"" }}{% if app.review_date %} · review {{ app.review_date|date:"M j, Y" }}{% endif %}{% if app.council_date %} · council {{ app.council_date|date:"M Y" }}{% endif %}.
+  {% if app.status == 'reviewed' and app.impact_score is None %}Add the score and summary statement under <em>Reviews</em>.{% endif %}
+</div></div>
+{% endif %}
+
+<div x-data="{ tab: (location.hash || '#overview').slice(1) }" x-init="$watch('tab', t => history.replaceState(null, '', '#' + t))" @hashchange.window="tab = (location.hash || '#overview').slice(1)">
+  <div class="tabs" role="tablist">
+    <button class="tab" :class="tab === 'overview' && 'active'" @click="tab = 'overview'" role="tab">Overview</button>
+    <button class="tab" :class="tab === 'tasks' && 'active'" @click="tab = 'tasks'" role="tab">Tasks {% if counts.tasks %}<span class="count">{{ counts.tasks }}</span>{% endif %}</button>
+    <button class="tab" :class="tab === 'documents' && 'active'" @click="tab = 'documents'" role="tab">Documents {% if counts.documents %}<span class="count">{{ counts.documents }}</span>{% endif %}</button>
+    <button class="tab" :class="tab === 'team' && 'active'" @click="tab = 'team'" role="tab">Team &amp; effort {% if counts.personnel %}<span class="count">{{ counts.personnel }}</span>{% endif %}</button>
+    <button class="tab" :class="tab === 'reviews' && 'active'" @click="tab = 'reviews'" role="tab">Reviews {% if counts.feedback %}<span class="count">{{ counts.feedback }}</span>{% endif %}</button>
+    <button class="tab" :class="tab === 'activity' && 'active'" @click="tab = 'activity'" role="tab">Notes &amp; activity {% if counts.comments %}<span class="count">{{ counts.comments }}</span>{% endif %}</button>
+  </div>
+
+  <div x-show="tab === 'overview'">{% include "grants/applications/_overview.html" %}</div>
+  <div x-show="tab === 'tasks'" x-cloak>{% include "grants/applications/_section_tasks.html" with app=app open_tasks=section_tasks.open_tasks done_tasks=section_tasks.done_tasks task_total=section_tasks.task_total task_pct=section_tasks.task_pct templates=section_tasks.templates %}</div>
+  <div x-show="tab === 'documents'" x-cloak>{% include "grants/applications/_section_documents.html" with documents=section_documents.documents %}</div>
+  <div x-show="tab === 'team'" x-cloak>{% include "grants/applications/_section_personnel.html" with personnel=section_personnel.personnel total_pm=section_personnel.total_pm %}</div>
+  <div x-show="tab === 'reviews'" x-cloak>{% include "grants/applications/_section_feedback.html" with feedback=section_feedback.feedback %}</div>
+  <div x-show="tab === 'activity'" x-cloak>{% include "grants/applications/_section_activity.html" with items=section_activity.items comment_form=section_activity.comment_form %}</div>
+</div>
+{% endblock %}

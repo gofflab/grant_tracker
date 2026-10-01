@@ -1,0 +1,27 @@
+{% extends base_template %}{% load gt %}
+{% block form_body %}
+<div class="form-grid" x-data="{ s: '{{ form.status.value }}' }">
+  {% include "_form_errors.html" %}
+  <p class="field span-12 mb-0"><strong>{{ app.display_title }}</strong> is currently {% status_badge app %}</p>
+  <div class="field span-6">
+    <label for="{{ form.status.id_for_label }}">New status</label>
+    <select name="status" id="{{ form.status.id_for_label }}" x-model="s">
+      {% for v, l in form.status.field.choices %}<option value="{{ v }}" {% if form.status.value == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="field span-6" x-show="['submitted','awarded','not_funded','reviewed'].includes(s)">
+    <label for="{{ form.effective_date.id_for_label }}"><span x-text="s === 'submitted' ? 'Submitted on' : (s === 'reviewed' ? 'Review date' : 'Decision date')"></span></label>
+    {{ form.effective_date }}
+  </div>
+  <template x-if="s === 'reviewed' || s === 'pending_award' || s === 'not_funded'">
+    <div class="field span-12" style="display:contents">
+      {% include "_field.html" with field=form.review_outcome span="span-4" %}
+      {% include "_field.html" with field=form.impact_score span="span-4" %}
+      {% include "_field.html" with field=form.percentile span="span-4" %}
+    </div>
+  </template>
+  {% include "_field.html" with field=form.note span="span-12" %}
+  <div class="field span-12" x-show="s === 'awarded'"><div class="alert good mb-0">{% icon 'award' %}<div>Next you'll confirm the award dates and amounts. Budget years, an award-setup checklist and the reporting schedule are generated for you.</div></div></div>
+  <div class="field span-12" x-show="s === 'not_funded'"><div class="alert mb-0">{% icon 'repeat' %}<div>Tip: record the summary statement under <em>Reviews</em>, then use <em>Start resubmission</em> to carry this application forward.</div></div></div>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}{{ opp.title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="titles">
+    <div class="crumbs"><a href="{% url 'grants:opportunity_list' %}">Opportunities</a></div>
+    <h1>{{ opp.title }}</h1>
+    <div class="row wrap mt-1">
+      {% status_badge opp.status opp.get_status_display 'o' %}
+      {% if opp.number %}<span class="badge plain mono">{{ opp.number }}</span>{% endif %}
+      {% if opp.mechanism %}<span class="badge plain">{{ opp.mechanism }}</span>{% endif %}
+      {% if opp.limited_submission %}<span class="chip chip-amber">Limited submission</span>{% endif %}
+      {% for t in opp.tags.all %}{% tag_chip t %}{% endfor %}
+    </div>
+  </div>
+  <div class="actions">
+    {% if user.can_edit %}
+    <a class="btn primary" href="{% url 'grants:application_create' %}?opportunity={{ opp.pk }}">{% icon 'file-text' %} Start application</a>
+    <div class="dropdown" x-data="{ open: false }" @click.outside="open = false">
+      <button class="btn" @click="open = !open">Mark as… {% icon 'chevron-down' 14 %}</button>
+      <div class="menu" x-show="open" x-cloak>
+        {% for v, l in statuses %}{% if v != opp.status %}<button hx-post="{% url 'grants:opportunity_status' opp.pk %}" hx-vals='{"status": "{{ v }}"}'>{% status_badge v l 'o' %}</button>{% endif %}{% endfor %}
+      </div>
+    </div>
+    <a class="btn" href="{% url 'grants:opportunity_edit' opp.pk %}">{% icon 'pencil' %} Edit</a>
+    {% if user.is_owner %}<button class="btn ghost icon-only" hx-get="{% url 'grants:opportunity_delete' opp.pk %}" hx-target="#modal" aria-label="Delete">{% icon 'trash-2' %}</button>{% endif %}
+    {% endif %}
+  </div>
+</div>
+<div class="grid grid-main">
+  <div class="stack">
+    {% if opp.summary or opp.eligibility %}
+    <div class="card"><div class="card-head"><h2>Summary</h2></div><div class="card-body prose">
+      {{ opp.summary|markdown }}
+      {% if opp.eligibility %}<div class="label mt-2">Eligibility</div>{{ opp.eligibility|markdown }}{% endif %}
+    </div></div>
+    {% endif %}
+    <div class="card">
+      <div class="card-head"><h2>Applications</h2></div>
+      {% if applications %}
+      <ul class="list">{% for a in applications %}<li><div class="grow"><a class="title" href="{{ a.get_absolute_url }}">{{ a.display_title }}</a><div class="meta"><span>{{ a.get_submission_type_display }}</span><span>{{ a.sponsor_deadline|date:"M j, Y"|default:"" }}</span></div></div>{% status_badge a %}</li>{% endfor %}</ul>
+      {% else %}<div class="empty"><p>No applications yet. <a href="{% url 'grants:application_create' %}?opportunity={{ opp.pk }}">Start one</a> to copy these details over.</p></div>{% endif %}
+    </div>
+    {% if opp.notes %}<div class="card"><div class="card-head"><h2>Notes</h2></div><div class="card-body prose">{{ opp.notes|markdown }}</div></div>{% endif %}
+  </div>
+  <div class="stack">
+    <div class="card"><div class="card-head"><h2>Deadlines</h2></div><div class="card-body">
+      <dl class="dl">
+        {% if opp.loi_deadline %}<dt>LOI / pre-proposal</dt><dd class="due {{ opp.loi_deadline|due_class }}">{{ opp.loi_deadline|date:"D, M j, Y" }}</dd>{% endif %}
+        {% if opp.internal_deadline %}<dt>Internal</dt><dd class="due {{ opp.internal_deadline|due_class }}">{{ opp.internal_deadline|date:"D, M j, Y" }}</dd>{% endif %}
+        <dt>Sponsor</dt><dd>{% if opp.deadline %}<span class="due {{ opp.deadline|due_class }}">{{ opp.deadline|date:"D, M j, Y" }}</span> <span class="muted small">{{ opp.deadline|days_until }}</span>{% else %}—{% endif %}</dd>
+        {% if opp.recurring %}<dt>Recurring</dt><dd>{{ opp.recurrence_notes|default:"Yes" }}</dd>{% endif %}
+        {% if opp.expires_on %}<dt>Expires</dt><dd>{{ opp.expires_on|date:"M j, Y" }}</dd>{% endif %}
+      </dl>
+    </div></div>
+    <div class="card"><div class="card-head"><h2>Details</h2></div><div class="card-body">
+      <dl class="dl">
+        <dt>Funder</dt><dd>{{ opp.funder.name|default:"—" }}{% if opp.sponsor_unit %} · {{ opp.sponsor_unit }}{% endif %}</dd>
+        <dt>Award ceiling</dt><dd>{{ opp.max_award|money }}{% if opp.budget_notes %}<br><span class="small muted">{{ opp.budget_notes }}</span>{% endif %}</dd>
+        <dt>Max duration</dt><dd>{% if opp.max_duration_years %}{{ opp.max_duration_years }} years{% else %}—{% endif %}</dd>
+        <dt>Fit</dt><dd>{% if opp.fit_score %}{{ opp.fit_score }} / 5{% else %}—{% endif %}</dd>
+        {% if opp.contact %}<dt>Program contact</dt><dd>{{ opp.contact }}{% if opp.contact.email %}<br><a href="mailto:{{ opp.contact.email }}">{{ opp.contact.email }}</a>{% endif %}</dd>{% endif %}
+        {% if opp.url %}<dt>Announcement</dt><dd><a href="{{ opp.url }}" target="_blank" rel="noopener">Open {% icon 'external-link' 12 %}</a></dd>{% endif %}
+        {% for k, v in opp.extra.items %}<dt>{{ k }}</dt><dd>{{ v|urlize }}</dd>{% endfor %}
+        <dt>Added</dt><dd>{{ opp.created_at|date:"M j, Y" }}{% if opp.added_by %} by {{ opp.added_by }}{% endif %}</dd>
+      </dl>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

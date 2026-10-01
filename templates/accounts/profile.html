@@ -1,0 +1,55 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}Profile & security{% endblock %}
+{% block content %}
+<div class="page-head"><div class="titles"><h1>Profile &amp; security</h1><div class="subtitle">{{ user.username }} · {{ user.get_role_display }}</div></div></div>
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Profile</h2></div>
+    <div class="card-body">
+      <form method="post" class="form-grid">{% csrf_token %}
+        {% include "_field.html" with field=form.first_name %}
+        {% include "_field.html" with field=form.last_name %}
+        {% include "_field.html" with field=form.email span="span-12" %}
+        {% include "_field.html" with field=form.email_digest span="span-8" %}
+        {% include "_field.html" with field=form.digest_days_ahead span="span-4" %}
+        <div class="field span-12"><div class="row"><button class="btn primary" type="submit">Save profile</button><a class="btn" href="{% url 'accounts:password_change' %}">{% icon 'key-round' %} Change password</a></div></div>
+      </form>
+    </div>
+  </div>
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h2>Two-factor authentication</h2>
+        <div class="actions">{% if has_2fa %}<span class="badge s-awarded">On</span>{% else %}<span class="badge">Off</span>{% endif %}</div></div>
+      <div class="card-body">
+        {% if has_2fa %}
+          <p>Your account asks for an authenticator code at each sign-in. {{ backup_remaining }} backup code{{ backup_remaining|pluralize }} remaining.</p>
+          <div class="row wrap">
+            <form method="post" action="{% url 'accounts:2fa_backup_codes' %}">{% csrf_token %}<button class="btn">{% icon 'refresh-cw' %} New backup codes</button></form>
+          </div>
+          {% if not require_2fa %}
+          <form method="post" action="{% url 'accounts:2fa_disable' %}" class="inline-form mt-2">{% csrf_token %}
+            <input class="input-sm" type="password" name="password" placeholder="Confirm password" required autocomplete="current-password">
+            <button class="btn danger sm">Turn off 2FA</button>
+          </form>
+          {% endif %}
+        {% else %}
+          <p>Protect grant documents and reviewer feedback with a second factor from an authenticator app (1Password, Google Authenticator, Duo, Authy).</p>
+          <a class="btn primary" href="{% url 'accounts:2fa_setup' %}">{% icon 'shield-check' %} Set up 2FA</a>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Calendar subscription</h2></div>
+      <div class="card-body">
+        <p class="ink-2">Subscribe in Google Calendar (Other calendars → From URL) or Outlook to see deadlines, tasks and reports. Treat this link like a password.</p>
+        <div class="row" x-data="{ copied: false }">
+          <input class="input" readonly value="{{ feed_url }}" id="feed-url" @focus="$el.select()">
+          <button class="btn" type="button" @click="navigator.clipboard.writeText(document.getElementById('feed-url').value); copied = true; setTimeout(() => copied = false, 1500)">
+            <span x-show="!copied">{% icon 'copy' %}</span><span x-show="copied" x-cloak>{% icon 'check' %}</span></button>
+        </div>
+        <form method="post" action="{% url 'accounts:rotate_calendar_token' %}" class="mt-1">{% csrf_token %}<button class="btn ghost sm">{% icon 'refresh-cw' 14 %} Regenerate link</button></form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

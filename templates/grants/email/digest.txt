@@ -1,0 +1,17 @@
+{% autoescape off %}Hi {{ user.first_name|default:user.username }},
+
+{% if urgent %}Here's what's due in the next 2 days.{% else %}Here's your {{ site_name }} look-ahead for the next {{ days }} days.{% endif %}
+{% if overdue %}
+OVERDUE TASKS ({{ overdue|length }})
+{% for t in overdue %}  - {{ t.title }}{% if t.application %} [{{ t.application.display_title }}]{% endif %} (due {{ t.due_date|date:"M j" }}{% if t.assignee %}, {{ t.assignee }}{% endif %})
+{% endfor %}{% endif %}{% if events %}
+DEADLINES & DATES
+{% for e in events %}  - {{ e.date|date:"D M j" }}  {{ e.title }}{% if e.subtitle %} ({{ e.subtitle }}){% endif %}
+{% endfor %}{% endif %}{% if my_tasks %}
+YOUR TASKS
+{% for t in my_tasks %}  - {{ t.due_date|date:"D M j" }}  {{ t.title }}{% if t.application %} [{{ t.application.display_title }}]{% endif %}
+{% endfor %}{% endif %}
+Open {{ site_name }}: {{ site_url }}/
+
+You can turn this email off under Profile & security.
+{% endautoescape %}

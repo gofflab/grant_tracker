@@ -1,0 +1,27 @@
+{% load gt %}<div id="section-tasks" hx-get="{% url 'grants:application_section' app.pk 'tasks' %}" hx-trigger="refresh-tasks from:body" hx-swap="outerHTML">
+<div class="card">
+  <div class="card-head">
+    <h2>Tasks</h2>
+    {% if task_total %}<span class="muted small">{{ done_tasks|length }} of {{ task_total }} done</span>
+    <div style="width:120px" class="progress good"><span style="width:{{ task_pct }}%"></span></div>{% endif %}
+    {% if user.can_edit %}
+    <div class="actions">
+      <button class="btn sm" hx-get="{% url 'grants:application_checklist' app.pk %}" hx-target="#modal">{% icon 'list-checks' 14 %} Apply template</button>
+      <button class="btn sm primary" hx-get="{% url 'grants:task_create' %}?application={{ app.pk }}" hx-target="#modal">{% icon 'plus' 14 %} Add task</button>
+    </div>
+    {% endif %}
+  </div>
+  {% if open_tasks or done_tasks %}
+  <ul class="list">{% for t in open_tasks %}{% include "grants/tasks/_row.html" %}{% endfor %}</ul>
+  {% if done_tasks %}
+  <details style="border-top:1px solid var(--border)">
+    <summary class="muted small" style="padding:10px 16px;cursor:pointer">{{ done_tasks|length }} completed</summary>
+    <ul class="list">{% for t in done_tasks %}{% include "grants/tasks/_row.html" %}{% endfor %}</ul>
+  </details>
+  {% endif %}
+  {% else %}
+  <div class="empty">{% icon 'list-todo' 28 %}<h3>No tasks yet</h3>
+    <p>Apply a checklist template (NIH, NSF, foundation) to generate tasks scheduled back from the deadline.</p></div>
+  {% endif %}
+</div>
+</div>

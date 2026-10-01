@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}History · {{ app.display_title }}{% endblock %}
+{% block content %}
+<div class="page-head"><div class="titles">
+  <div class="crumbs"><a href="{% url 'grants:application_list' %}">Applications</a> {% icon 'chevron-right' 12 %} <a href="{{ app.get_absolute_url }}">{{ app.display_title }}</a></div>
+  <h1>Change history</h1><div class="subtitle">Every saved change to this application's fields, with who made it.</div></div></div>
+<div class="card"><div class="card-body">
+  <ul class="timeline">
+  {% for e in entries %}
+    <li><span class="dot">{% icon 'history' %}</span>
+      <div><strong>{{ e.record.history_user|default:"System" }}</strong> <span class="when">{{ e.record.history_date|date:"M j, Y g:i a" }}</span></div>
+      {% if e.created %}<div class="ink-2">Created the application</div>
+      {% elif e.changes %}
+        <table class="table compact mt-1" style="max-width:900px"><tbody>
+        {% for c in e.changes %}<tr><td style="width:200px" class="muted">{{ c.field|capfirst }}</td><td><del class="muted">{{ c.old|default:"—"|truncatechars:120 }}</del></td><td>{{ c.new|default:"—"|truncatechars:120 }}</td></tr>{% endfor %}
+        </tbody></table>
+      {% else %}<div class="muted small">Saved without field changes</div>{% endif %}
+    </li>
+  {% empty %}<li>No history recorded.</li>
+  {% endfor %}
+  </ul>
+</div></div>
+{% endblock %}

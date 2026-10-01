@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}Backup codes{% endblock %}
+{% block content %}
+<div class="page-head"><div class="titles"><h1>{% if first_time %}Two-factor authentication is on{% else %}New backup codes{% endif %}</h1>
+<div class="subtitle">Save these one-time backup codes somewhere safe. Each works once if you lose your device. They won't be shown again.</div></div></div>
+<div class="card" style="max-width:520px"><div class="card-body">
+  <div class="codes">{% for c in codes %}<span>{{ c }}</span>{% endfor %}</div>
+  <div class="row mt-2"><button class="btn" type="button" x-data @click="window.print()">{% icon 'printer' %} Print</button><a class="btn primary" href="{% url 'accounts:profile' %}">Done</a></div>
+</div></div>
+{% endblock %}

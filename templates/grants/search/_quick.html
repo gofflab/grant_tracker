@@ -1,0 +1,10 @@
+{% load gt %}{% if results %}
+{% with r=results %}
+{% if r.applications %}<div class="search-section">Applications</div>{% for a in r.applications %}<a class="search-hit" href="{{ a.get_absolute_url }}">{{ a.display_title }}<small>{{ a.get_status_display }}{% if a.funder %} · {{ a.funder.display_name }}{% endif %}{% if a.mechanism %} {{ a.mechanism }}{% endif %}</small></a>{% endfor %}{% endif %}
+{% if r.opportunities %}<div class="search-section">Opportunities</div>{% for o in r.opportunities %}<a class="search-hit" href="{{ o.get_absolute_url }}">{{ o.title }}<small>{{ o.number }}{% if o.funder %} · {{ o.funder.display_name }}{% endif %}</small></a>{% endfor %}{% endif %}
+{% if r.documents %}<div class="search-section">Documents</div>{% for d in r.documents %}<a class="search-hit" href="{% url 'grants:document_download' d.pk %}{% if d.content_type == 'application/pdf' %}?inline=1{% endif %}">{{ d.title }}<small>{{ d.get_category_display }}{% if d.application %} · {{ d.application.display_title }}{% endif %}</small></a>{% endfor %}{% endif %}
+{% if r.people %}<div class="search-section">People</div>{% for p in r.people %}<a class="search-hit" href="{% url 'grants:settings' %}?tab=people">{{ p }}<small>{{ p.get_kind_display }}{% if p.institution %} · {{ p.institution }}{% endif %}</small></a>{% endfor %}{% endif %}
+{% if r.tasks %}<div class="search-section">Tasks</div>{% for t in r.tasks %}<a class="search-hit" href="{% if t.application %}{{ t.application.get_absolute_url }}#tasks{% else %}{% url 'grants:task_list' %}{% endif %}">{{ t.title }}<small>{{ t.get_status_display }}{% if t.application %} · {{ t.application.display_title }}{% endif %}</small></a>{% endfor %}{% endif %}
+{% if not r.applications and not r.opportunities and not r.documents and not r.people and not r.tasks %}<div class="search-hit muted">No matches for “{{ q }}”</div>{% else %}<a class="search-hit" href="{% url 'grants:search' %}?q={{ q|urlencode }}" style="color:var(--accent-ink)">See all results {% icon 'arrow-right' 14 %}</a>{% endif %}
+{% endwith %}
+{% endif %}

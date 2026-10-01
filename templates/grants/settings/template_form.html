@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}{{ template.name|default:"New checklist template" }}{% endblock %}
+{% block content %}
+<div class="page-head"><div class="titles"><div class="crumbs"><a href="{% url 'grants:settings' %}?tab=templates">Checklist templates</a></div>
+  <h1>{{ template.name|default:"New checklist template" }}</h1>
+  <div class="subtitle">Offsets are in days relative to the anchor date. −30 with “Sponsor deadline” means a month before the deadline. Weekend dates move to the Friday before.</div></div></div>
+<form method="post" class="card">{% csrf_token %}
+  <div class="card-body">
+    <div class="form-grid">
+      {% include "_form_errors.html" %}
+      {% include "_field.html" with field=form.name span="span-6" %}
+      {% include "_field.html" with field=form.applies_to span="span-3" %}
+      {% include "_field.html" with field=form.mechanisms span="span-3" %}
+      {% include "_field.html" with field=form.description span="span-8" %}
+      {% include "_field.html" with field=form.is_default span="span-4" %}
+    </div>
+    <div class="mt-2" x-data="formset('items')">
+      {{ formset.management_form }}
+      {% if formset.non_form_errors %}<div class="errors">{{ formset.non_form_errors }}</div>{% endif %}
+      <div class="table-wrap"><table class="table compact form-table">
+        <thead><tr><th>Task</th><th>Category</th><th>Anchor</th><th>Offset (days)</th><th>Order</th><th>Delete</th></tr></thead>
+        <tbody data-forms>
+          {% for f in formset %}
+          <tr>{{ f.id }}<td>{{ f.title }}{{ f.title.errors }}</td><td>{{ f.category }}</td><td>{{ f.anchor }}</td><td>{{ f.offset_days }}</td><td>{{ f.order }}</td><td>{% if f.instance.pk %}{{ f.DELETE }}{% endif %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+      <template data-empty-form><tr>{{ formset.empty_form.id }}<td>{{ formset.empty_form.title }}</td><td>{{ formset.empty_form.category }}</td><td>{{ formset.empty_form.anchor }}</td><td>{{ formset.empty_form.offset_days }}</td><td>{{ formset.empty_form.order }}</td><td></td></tr></template>
+      <button type="button" class="btn sm mt-1" @click="add()">{% icon 'plus' 14 %} Add item</button>
+    </div>
+  </div>
+  <div class="form-actions" style="padding:14px 16px;margin:0">
+    <a class="btn ghost" href="{% url 'grants:settings' %}?tab=templates">Back</a>
+    <button class="btn primary" type="submit">Save template</button>
+  </div>
+</form>
+{% endblock %}

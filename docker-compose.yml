@@ -1,0 +1,99 @@
+# Grant Tracker: app + PostgreSQL data container + HTTPS proxy + backups + reminder scheduler.
+#   cp .env.example .env   # then edit
+#   docker compose up -d --build
+name: grant-tracker
+
+x-app: &app
+  image: grant-tracker:latest
+  env_file: .env
+  environment:
+    POSTGRES_HOST: db
+    TZ: ${TIME_ZONE:-America/New_York}
+  restart: unless-stopped
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-grant_tracker}
+      POSTGRES_USER: ${POSTGRES_USER:-grant_tracker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      TZ: ${TIME_ZONE:-America/New_York}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [backend]
+
+  web:
+    <<: *app
+    build: .
+    networks: [backend, frontend]
+
+  scheduler:
+    <<: *app
+    command: ["python", "manage.py", "run_scheduler"]
+    environment:
+      POSTGRES_HOST: db
+      RUN_MIGRATIONS: "0"
+      TZ: ${TIME_ZONE:-America/New_York}
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    networks: [backend, frontend]
+
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-grant_tracker}
+      POSTGRES_USER: ${POSTGRES_USER:-grant_tracker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_HOUR: ${BACKUP_HOUR:-2}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      TZ: ${TIME_ZONE:-America/New_York}
+    volumes:
+      - ./docker/backup.sh:/backup.sh:ro
+      - ${BACKUP_DIR:-./backups}:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [backend]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
+      CADDY_TLS: ${CADDY_TLS:-}
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    networks: [frontend]
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
+
+networks:
+  backend:
+    internal: true
+  frontend:

@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}Set up two-factor authentication{% endblock %}
+{% block content %}
+<div class="page-head"><div class="titles"><h1>Set up two-factor authentication</h1>
+{% if required %}<div class="subtitle">This portal requires 2FA for every account.</div>{% endif %}</div></div>
+<div class="card" style="max-width:640px"><div class="card-body">
+  <ol class="prose" style="padding-left:18px">
+    <li>Open your authenticator app and add a new account.</li>
+    <li>Scan this QR code, or enter the key manually.</li>
+    <li>Enter the 6-digit code the app shows.</li>
+  </ol>
+  <div class="row wrap" style="gap:24px;align-items:flex-start">
+    <div class="qr">{{ qr_svg|safe }}</div>
+    <div style="flex:1;min-width:220px">
+      <div class="label">Setup key</div>
+      <p class="mono" style="word-break:break-all">{{ secret }}</p>
+      <form method="post" class="form-grid">{% csrf_token %}
+        {% include "_field.html" with field=form.token span="span-12" %}
+        <div class="field span-12"><button class="btn primary" type="submit">Verify &amp; turn on</button></div>
+      </form>
+    </div>
+  </div>
+</div></div>
+{% endblock %}

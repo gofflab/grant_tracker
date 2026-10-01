@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}Award details{% endblock %}
+{% block content %}
+<div class="page-head"><div class="titles">
+  <div class="crumbs"><a href="{% url 'grants:award_list' %}">Awards</a> {% icon 'chevron-right' 12 %} <a href="{{ app.get_absolute_url }}">{{ app.display_title }}</a></div>
+  <h1>{% if first_time %}Set up award{% else %}Edit award{% endif %}</h1>
+  <div class="subtitle">{% if first_time %}Prefilled from the application. Confirm against the Notice of Award.{% endif %}</div></div></div>
+<form method="post" class="card" style="max-width:1000px">{% csrf_token %}
+  <div class="card-body"><div class="form-grid">
+    {% include "_form_errors.html" %}
+    {% include "_field.html" with field=form.award_number span="span-4" %}
+    {% include "_field.html" with field=form.status span="span-4" %}
+    {% include "_field.html" with field=form.notice_date span="span-4" %}
+    {% include "_field.html" with field=form.start_date span="span-4" %}
+    {% include "_field.html" with field=form.end_date span="span-4" %}
+    {% include "_field.html" with field=form.nce_end_date span="span-4" %}
+    {% include "_field.html" with field=form.awarded_direct_total span="span-4" %}
+    {% include "_field.html" with field=form.awarded_total span="span-4" %}
+    {% include "_field.html" with field=form.fa_rate span="span-4" %}
+    {% include "_field.html" with field=form.account_number span="span-4" %}
+    {% include "_field.html" with field=form.reporting span="span-4" %}
+    {% include "_field.html" with field=form.grants_specialist span="span-4" %}
+    {% include "_field.html" with field=form.terms %}
+    {% include "_field.html" with field=form.notes %}
+    <div class="field span-12"><div class="alert info mb-0">{% icon 'sparkles' %}<div style="flex:1">{% include "_field.html" with field=form.generate_schedule span="span-12" %}</div></div></div>
+  </div></div>
+  <div class="form-actions" style="padding:14px 16px;margin:0">
+    <a class="btn ghost" href="{{ award.get_absolute_url }}">Cancel</a>
+    <button class="btn primary" type="submit">Save award</button>
+  </div>
+</form>
+{% endblock %}

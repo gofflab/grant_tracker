@@ -1,0 +1,92 @@
+from django.urls import path
+
+from .views import (
+    analytics,
+    applications,
+    awards,
+    calendar,
+    dashboard,
+    documents,
+    importexport,
+    opportunities,
+    reports,
+    search,
+    settings_views,
+    tasks,
+    team,
+)
+
+app_name = "grants"
+
+urlpatterns = [
+    path("", dashboard.dashboard, name="dashboard"),
+    # Opportunities
+    path("opportunities/", opportunities.opportunity_list, name="opportunity_list"),
+    path("opportunities/new/", opportunities.opportunity_create, name="opportunity_create"),
+    path("opportunities/<int:pk>/", opportunities.opportunity_detail, name="opportunity_detail"),
+    path("opportunities/<int:pk>/edit/", opportunities.opportunity_edit, name="opportunity_edit"),
+    path("opportunities/<int:pk>/status/", opportunities.opportunity_status, name="opportunity_status"),
+    path("opportunities/<int:pk>/delete/", opportunities.opportunity_delete, name="opportunity_delete"),
+    # Applications
+    path("applications/", applications.application_list, name="application_list"),
+    path("applications/board/", applications.application_board, name="application_board"),
+    path("applications/new/", applications.application_create, name="application_create"),
+    path("applications/export.csv", importexport.export_applications, name="application_export"),
+    path("applications/<int:pk>/", applications.application_detail, name="application_detail"),
+    path("applications/<int:pk>/edit/", applications.application_edit, name="application_edit"),
+    path("applications/<int:pk>/delete/", applications.application_delete, name="application_delete"),
+    path("applications/<int:pk>/status/", applications.application_status, name="application_status"),
+    path("applications/<int:pk>/star/", applications.application_star, name="application_star"),
+    path("applications/<int:pk>/clone/", applications.application_clone, name="application_clone"),
+    path("applications/<int:pk>/checklist/", applications.application_apply_checklist, name="application_checklist"),
+    path("applications/<int:pk>/history/", applications.application_history, name="application_history"),
+    path("applications/<int:pk>/section/<str:name>/", applications.application_section, name="application_section"),
+    path("applications/<int:pk>/comments/", applications.comment_create, name="comment_create"),
+    path("applications/<int:app_pk>/personnel/new/", team.personnel_create, name="personnel_create"),
+    path("applications/<int:app_pk>/feedback/new/", team.feedback_create, name="feedback_create"),
+    path("applications/<int:app_pk>/award/new/", awards.award_create, name="award_create"),
+    path("comments/<int:pk>/delete/", applications.comment_delete, name="comment_delete"),
+    path("personnel/<int:pk>/edit/", team.personnel_edit, name="personnel_edit"),
+    path("personnel/<int:pk>/delete/", team.personnel_delete, name="personnel_delete"),
+    path("feedback/<int:pk>/edit/", team.feedback_edit, name="feedback_edit"),
+    path("feedback/<int:pk>/delete/", team.feedback_delete, name="feedback_delete"),
+    # Tasks
+    path("tasks/", tasks.task_list, name="task_list"),
+    path("tasks/new/", tasks.task_create, name="task_create"),
+    path("tasks/<int:pk>/edit/", tasks.task_edit, name="task_edit"),
+    path("tasks/<int:pk>/delete/", tasks.task_delete, name="task_delete"),
+    path("tasks/<int:pk>/toggle/", tasks.task_toggle, name="task_toggle"),
+    # Documents
+    path("documents/", documents.document_list, name="document_list"),
+    path("documents/new/", documents.document_create, name="document_create"),
+    path("documents/<int:pk>/edit/", documents.document_edit, name="document_edit"),
+    path("documents/<int:pk>/delete/", documents.document_delete, name="document_delete"),
+    path("documents/<int:pk>/download/", documents.document_download, name="document_download"),
+    # Awards
+    path("awards/", awards.award_list, name="award_list"),
+    path("awards/<int:pk>/", awards.award_detail, name="award_detail"),
+    path("awards/<int:pk>/edit/", awards.award_edit, name="award_edit"),
+    path("awards/<int:pk>/regenerate/", awards.award_regenerate, name="award_regenerate"),
+    path("awards/<int:award_pk>/periods/new/", awards.period_create, name="period_create"),
+    path("periods/<int:pk>/edit/", awards.period_edit, name="period_edit"),
+    path("periods/<int:pk>/delete/", awards.period_delete, name="period_delete"),
+    path("effort/", reports.effort, name="effort"),
+    path("current-pending/", reports.other_support, name="other_support"),
+    # Calendar, analytics, search
+    path("calendar/", calendar.calendar_view, name="calendar"),
+    path("calendar/feed/<str:token>.ics", calendar.calendar_feed, name="calendar_feed"),
+    path("analytics/", analytics.analytics, name="analytics"),
+    path("search/", search.search, name="search"),
+    path("search/quick/", search.quick_search, name="quick_search"),
+    # Import
+    path("import/", importexport.import_view, name="import"),
+    path("import/template.csv", importexport.import_template, name="import_template"),
+    # Settings / reference data
+    path("settings/", settings_views.settings_home, name="settings"),
+    path("settings/templates/new/", settings_views.template_edit, name="template_create"),
+    path("settings/templates/<int:pk>/", settings_views.template_edit, name="template_edit"),
+    path("settings/templates/<int:pk>/delete/", settings_views.template_delete, name="template_delete"),
+    path("settings/<str:kind>/new/", settings_views.ref_create, name="ref_create"),
+    path("settings/<str:kind>/<int:pk>/", settings_views.ref_edit, name="ref_edit"),
+    path("settings/<str:kind>/<int:pk>/delete/", settings_views.ref_delete, name="ref_delete"),
+]

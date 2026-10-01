@@ -1,0 +1,37 @@
+{% extends base_template %}{% load gt %}
+{% block form_body %}
+<div class="form-grid" x-data="{ newPerson: {% if form.new_first_name.value %}true{% else %}false{% endif %} }">
+  {% include "_form_errors.html" %}
+  <div class="field span-12" x-show="!newPerson">
+    <label for="{{ form.person.id_for_label }}">Person</label>
+    {{ form.person }}
+    <span class="help">Not listed? <a href="#" @click.prevent="newPerson = true">Add a new person</a></span>
+  </div>
+  <template x-if="newPerson">
+    <div style="display:contents">
+      {% include "_field.html" with field=form.new_first_name span="span-4" %}
+      {% include "_field.html" with field=form.new_last_name span="span-4" %}
+      {% include "_field.html" with field=form.new_kind span="span-4" %}
+      <p class="field span-12 help mb-0"><a href="#" @click.prevent="newPerson = false">Choose an existing person instead</a></p>
+    </div>
+  </template>
+  {% include "_field.html" with field=form.role %}
+  {% include "_field.html" with field=form.is_key %}
+  <div style="display:contents" x-data="effortInput('{{ form.person_months.value|default_if_none:'' }}')">
+    <div class="field span-6">
+      <label for="{{ form.person_months.id_for_label }}">Person-months / year</label>
+      <input type="number" step="0.01" min="0" max="12" name="person_months" id="{{ form.person_months.id_for_label }}" x-model.number="pm">
+      <span class="help">12 = full time. Calendar months, as on NIH Other Support.</span>
+      {{ form.person_months.errors }}
+    </div>
+    <div class="field span-6">
+      <label for="pct-effort">or % effort</label>
+      <input type="number" step="0.1" min="0" max="100" id="pct-effort" :value="pct" @input="setPct($event.target.value)">
+      <span class="help">Type either one; the other updates.</span>
+    </div>
+  </div>
+  {% include "_field.html" with field=form.start_date %}
+  {% include "_field.html" with field=form.end_date %}
+  {% include "_field.html" with field=form.notes span="span-12" %}
+</div>
+{% endblock %}

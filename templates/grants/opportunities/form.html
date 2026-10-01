@@ -1,0 +1,54 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head"><div class="titles"><div class="crumbs"><a href="{% url 'grants:opportunity_list' %}">Opportunities</a></div><h1>{{ title }}</h1></div></div>
+<form method="post" class="card" style="max-width:1000px">{% csrf_token %}
+  <div class="card-body"><div class="form-grid">
+    {% include "_form_errors.html" %}
+    <div class="fieldset-title">Announcement</div>
+    {% include "_field.html" with field=form.title span="span-12" %}
+    {% include "_field.html" with field=form.funder span="span-4" %}
+    {% include "_field.html" with field=form.sponsor_unit span="span-4" %}
+    {% include "_field.html" with field=form.mechanism span="span-4" %}
+    {% include "_field.html" with field=form.number span="span-4" %}
+    {% include "_field.html" with field=form.url span="span-8" %}
+    {% include "_field.html" with field=form.status span="span-4" %}
+    {% include "_field.html" with field=form.fit_score span="span-4" %}
+    {% include "_field.html" with field=form.contact span="span-4" %}
+    <div class="fieldset-title">Dates</div>
+    {% include "_field.html" with field=form.loi_deadline span="span-3" %}
+    {% include "_field.html" with field=form.internal_deadline span="span-3" %}
+    {% include "_field.html" with field=form.deadline span="span-3" %}
+    {% include "_field.html" with field=form.expires_on span="span-3" %}
+    {% include "_field.html" with field=form.recurring span="span-4" %}
+    {% include "_field.html" with field=form.recurrence_notes span="span-8" %}
+    {% include "_field.html" with field=form.limited_submission span="span-12" %}
+    <div class="fieldset-title">Budget</div>
+    {% include "_field.html" with field=form.max_award span="span-4" %}
+    {% include "_field.html" with field=form.budget_notes span="span-5" %}
+    {% include "_field.html" with field=form.max_duration_years span="span-3" %}
+    <div class="fieldset-title">Description</div>
+    {% include "_field.html" with field=form.summary span="span-12" %}
+    {% include "_field.html" with field=form.eligibility %}
+    {% include "_field.html" with field=form.notes %}
+    <div class="field span-6"><label>Tags</label><div class="chips">{% for cb in form.tags %}<label class="chip chip-gray" style="cursor:pointer">{{ cb.tag }} {{ cb.choice_label }}</label>{% empty %}<span class="muted small">No tags yet.</span>{% endfor %}</div></div>
+    {% include "_field.html" with field=form.new_tags %}
+    <div class="field span-12" x-data="kvEditor('{{ form.extra.auto_id }}')">
+      {{ form.extra }}
+      <label>Custom fields</label>
+      <template x-for="(row, i) in rows" :key="i">
+        <div class="kv-row">
+          <input class="input" type="text" placeholder="Field" x-model="row.key" aria-label="Field name">
+          <input class="input" type="text" placeholder="Value" x-model="row.value" aria-label="Field value">
+          <button type="button" class="btn ghost icon-only" @click="remove(i)" aria-label="Remove">{% icon 'x' %}</button>
+        </div>
+      </template>
+      <div><button type="button" class="btn sm" @click="add()">{% icon 'plus' 14 %} Add field</button></div>
+    </div>
+  </div></div>
+  <div class="form-actions" style="padding:14px 16px;margin:0">
+    <a class="btn ghost" href="{% if opp %}{{ opp.get_absolute_url }}{% else %}{% url 'grants:opportunity_list' %}{% endif %}">Cancel</a>
+    <button class="btn primary" type="submit">Save</button>
+  </div>
+</form>
+{% endblock %}

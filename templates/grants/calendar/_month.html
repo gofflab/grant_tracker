@@ -1,0 +1,41 @@
+{% load gt %}<div class="grid grid-main" style="grid-template-columns:minmax(0,3fr) minmax(260px,1fr)">
+<div class="card">
+  <div class="card-head">
+    <button class="btn ghost sm icon-only" hx-get="{% url 'grants:calendar' %}?y={{ prev.year }}&m={{ prev.month }}{% for k in selected_kinds %}&kind={{ k }}{% endfor %}" hx-target="#cal-month" hx-push-url="{% url 'grants:calendar' %}?y={{ prev.year }}&m={{ prev.month }}" aria-label="Previous month">{% icon 'chevron-left' %}</button>
+    <h2 style="min-width:150px;text-align:center">{{ first|date:"F Y" }}</h2>
+    <button class="btn ghost sm icon-only" hx-get="{% url 'grants:calendar' %}?y={{ next.year }}&m={{ next.month }}{% for k in selected_kinds %}&kind={{ k }}{% endfor %}" hx-target="#cal-month" hx-push-url="{% url 'grants:calendar' %}?y={{ next.year }}&m={{ next.month }}" aria-label="Next month">{% icon 'chevron-right' %}</button>
+    <button class="btn sm" hx-get="{% url 'grants:calendar' %}" hx-target="#cal-month" hx-push-url="{% url 'grants:calendar' %}">Today</button>
+  </div>
+  <div class="card-body" style="padding:12px">
+    <form class="legend mb-1" hx-get="{% url 'grants:calendar' %}" hx-target="#cal-month" hx-trigger="change">
+      <input type="hidden" name="y" value="{{ first.year }}"><input type="hidden" name="m" value="{{ first.month }}">
+      {% for k, label in kinds.items %}
+      <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer" class="ev-{{ k }}">
+        <input type="checkbox" name="kind" value="{{ k }}" {% if k in selected_kinds %}checked{% endif %} style="accent-color:var(--ev)"> <i></i> {{ label }}
+      </label>
+      {% endfor %}
+    </form>
+    <div class="cal" role="grid" aria-label="{{ first|date:'F Y' }}">
+      {% for d in dow %}<div class="cal-dow" role="columnheader">{{ d }}</div>{% endfor %}
+      {% for week in weeks %}{% for day in week %}
+      <div class="cal-day {% if day.other %}other{% endif %} {% if day.date == today %}today{% endif %} {% if day.date.weekday >= 5 %}weekend{% endif %}" role="gridcell">
+        <span class="cal-num">{{ day.date.day }}</span>
+        {% for e in day.events|slice:":4" %}<a class="cal-ev ev-{{ e.kind }}" href="{{ e.url }}" title="{{ e.kind_label }}: {{ e.title }}{% if e.subtitle %} · {{ e.subtitle }}{% endif %}" {% if e.done %}style="opacity:.55;text-decoration:line-through"{% endif %}>{{ e.title }}</a>{% endfor %}
+        {% if day.events|length > 4 %}<span class="small muted" style="padding-left:6px">+{{ day.events|length|add:"-4" }} more</span>{% endif %}
+      </div>
+      {% endfor %}{% endfor %}
+    </div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-head"><h2>Next 60 days</h2></div>
+  {% if agenda %}
+  <ul class="list">{% for e in agenda %}
+    <li style="padding:8px 14px">
+      <span class="date-pill {{ e.date|due_class }}"><span class="m">{{ e.date|date:"M" }}</span><span class="d">{{ e.date|date:"j" }}</span></span>
+      <div class="grow"><a class="title" href="{{ e.url }}" style="white-space:normal">{{ e.title }}</a><div class="meta"><span class="cal-ev ev-{{ e.kind }}" style="display:inline-block;margin:0">{{ e.kind_label }}</span></div></div>
+    </li>{% endfor %}
+  </ul>
+  {% else %}<div class="empty"><p>Nothing scheduled.</p></div>{% endif %}
+</div>
+</div>

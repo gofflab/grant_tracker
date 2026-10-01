@@ -1,0 +1,12 @@
+{% extends "accounts/_auth_base.html" %}
+{% block title %}Two-factor verification{% endblock %}
+{% block auth %}
+<h1 style="font-size:18px;margin-bottom:6px">Two-factor verification</h1>
+<p class="muted">Enter the code from your authenticator app.</p>
+<form method="post" class="form-grid">{% csrf_token %}
+  {% include "_field.html" with field=form.token span="span-12" %}
+  <input type="hidden" name="next" value="{{ next }}">
+  <div class="field span-12"><button class="btn primary" type="submit" style="width:100%">Verify</button></div>
+</form>
+<form method="post" action="{% url 'accounts:logout' %}" class="mt-2" style="text-align:center">{% csrf_token %}<button class="btn ghost sm">Cancel and sign out</button></form>
+{% endblock %}

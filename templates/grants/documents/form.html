@@ -1,0 +1,27 @@
+{% extends base_template %}{% load gt %}
+{% block form_body %}
+<div class="form-grid" x-data="{ mode: '{% if doc and doc.external_url and not doc.has_file %}link{% else %}file{% endif %}' }">
+  {% include "_form_errors.html" %}
+  <div class="field span-12">
+    <div class="btn-group" role="group" aria-label="Source">
+      <button type="button" class="btn sm" :class="mode === 'file' && 'active'" @click="mode = 'file'">{% icon 'upload' 14 %} Upload file</button>
+      <button type="button" class="btn sm" :class="mode === 'link' && 'active'" @click="mode = 'link'">{% icon 'link' 14 %} Link (Drive, OneDrive, Box)</button>
+    </div>
+  </div>
+  <div class="field span-12" x-show="mode === 'file'">
+    <label for="{{ form.upload.id_for_label }}">{% if doc and doc.has_file %}Replace file{% else %}File{% endif %}</label>
+    {{ form.upload }}
+    {% if doc and doc.has_file %}<span class="help">Current: {{ doc.filename }} ({{ doc.size|filesizeformat }})</span>{% endif %}
+    <span class="help">{{ form.upload.help_text }}</span>
+    {{ form.upload.errors }}
+  </div>
+  <div class="field span-12" x-show="mode === 'link'" x-cloak>{% include "_field.html" with field=form.external_url span="span-12" %}</div>
+  {% include "_field.html" with field=form.title span="span-8" %}
+  {% include "_field.html" with field=form.version span="span-4" %}
+  {% include "_field.html" with field=form.category %}
+  {% include "_field.html" with field=form.application %}
+  {% include "_field.html" with field=form.is_final %}
+  {% if form.restricted %}{% include "_field.html" with field=form.restricted %}{% endif %}
+  {% include "_field.html" with field=form.notes span="span-12" %}
+</div>
+{% endblock %}

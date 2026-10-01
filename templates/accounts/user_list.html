@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<div class="page-head"><div class="titles"><h1>Users</h1><div class="subtitle">Owners manage users. Editors change data. Viewers are read-only.</div></div>
+  <div class="actions"><a class="btn primary" href="{% url 'accounts:user_create' %}">{% icon 'plus' %} Add user</a></div></div>
+<div class="card"><div class="table-wrap"><table class="table">
+  <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>2FA</th><th>Last sign-in</th><th></th></tr></thead>
+  <tbody>
+  {% for u in users %}
+    <tr {% if not u.is_active %}class="muted"{% endif %}>
+      <td class="title-cell"><div class="row"><span class="avatar sm">{{ u.initials }}</span><a href="{% url 'accounts:user_update' u.pk %}">{{ u.get_full_name|default:u.username }}</a>{% if not u.is_active %}<span class="badge plain">Inactive</span>{% endif %}</div></td>
+      <td class="mono">{{ u.username }}</td><td>{{ u.email|default:"—" }}</td><td>{{ u.get_role_display }}</td>
+      <td>{% if u.pk in totp_users %}<span class="badge s-awarded">On</span>{% else %}<span class="badge">Off</span>{% endif %}</td>
+      <td class="nowrap">{{ u.last_login|date:"M j, Y"|default:"Never" }}</td>
+      <td class="right nowrap">
+        <div class="dropdown" x-data="{ open: false }" @click.outside="open = false" style="display:inline-block">
+          <button class="btn ghost sm icon-only" @click="open = !open" aria-label="Actions">{% icon 'ellipsis' %}</button>
+          <div class="menu" x-show="open" x-cloak>
+            <a href="{% url 'accounts:user_update' u.pk %}">{% icon 'pencil' %} Edit</a>
+            <form method="post" action="{% url 'accounts:user_reset_2fa' u.pk %}">{% csrf_token %}<button>{% icon 'shield-check' %} Reset 2FA</button></form>
+            <form method="post" action="{% url 'accounts:user_unlock' u.pk %}">{% csrf_token %}<button>{% icon 'lock' %} Clear sign-in lockout</button></form>
+          </div>
+        </div>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div></div>
+{% endblock %}
