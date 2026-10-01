@@ -17,9 +17,27 @@
     {% if user.can_edit %}
     <button class="btn" hx-post="{% url 'grants:award_regenerate' award.pk %}" hx-confirm="Recalculate reporting tasks from the current award dates? Completed tasks are not touched.">{% icon 'refresh-cw' %} Refresh reporting schedule</button>
     <a class="btn primary" href="{% url 'grants:award_edit' award.pk %}">{% icon 'pencil' %} Edit award</a>
+    <div class="dropdown" x-data="{ open: false }" @click.outside="open = false">
+      <button class="btn icon-only" @click="open = !open" aria-label="More actions">{% icon 'ellipsis' %}</button>
+      <div class="menu" x-show="open" x-cloak>
+        <div class="menu-label">Set status</div>
+        {% for value, label in award_statuses %}{% if value != award.status %}
+        <button hx-post="{% url 'grants:award_status' award.pk %}" hx-vals='{"status": "{{ value }}"}'>{% status_badge value label 'a' %}</button>
+        {% endif %}{% endfor %}
+        <div class="sep"></div>
+        <a href="{% url 'grants:application_history' app.pk %}">{% icon 'history' %} Change history</a>
+        {% if user.is_owner %}<a href="#" hx-get="{% url 'grants:award_delete' award.pk %}" hx-target="#modal" @click="open = false" class="danger">{% icon 'trash-2' %} Delete award record</a>{% endif %}
+      </div>
+    </div>
     {% endif %}
   </div>
 </div>
+{% if period_over and user.can_edit %}
+<div class="alert warn">{% icon 'calendar-clock' %}<div style="flex:1">The project period ended {{ award.effective_end|date:"M j, Y" }}, but the award is still marked {{ award.get_status_display|lower }}.</div>
+  <button class="btn sm" hx-post="{% url 'grants:award_status' award.pk %}" hx-vals='{"status": "ended"}'>Mark ended</button>
+  <a class="btn sm ghost" href="{% url 'grants:award_edit' award.pk %}">Record a no-cost extension</a>
+</div>
+{% endif %}
 
 <div class="stats">
   <div class="stat"><div class="stat-label">Project period</div><div class="stat-value" style="font-size:18px">{{ award.start_date|date:"M Y"|default:"?" }} – {{ award.effective_end|date:"M Y"|default:"?" }}</div>

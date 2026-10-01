@@ -10,7 +10,7 @@
     <div class="form-actions" style="padding:14px 16px;margin:0">
       {% block form_actions %}
       <a class="btn ghost" href="{{ cancel_url }}">Cancel</a>
-      <button type="submit" class="btn primary">{{ submit_label }}</button>
+      <button type="submit" class="btn primary {% if danger %}danger{% endif %}">{{ submit_label }}</button>
       {% endblock %}
     </div>
   </form>

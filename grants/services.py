@@ -9,7 +9,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from .models import (
@@ -123,6 +123,57 @@ def create_award(application, user=None):
         generate_budget_periods(award)
         generate_reporting_tasks(award, user)
     return award
+
+
+def award_generated_tasks(award):
+    """Tasks the award created: its reporting schedule and the award-setup checklist."""
+    app = award.application
+    setup_titles = ChecklistItem.objects.filter(
+        template__applies_to=ChecklistTemplate.AppliesTo.AWARD
+    ).values_list("title", flat=True)
+    return app.tasks.filter(
+        models.Q(auto_key__startswith=f"award:{award.pk}:")
+        | models.Q(title__in=list(setup_titles), created_at__gte=award.created_at - timedelta(minutes=1))
+    )
+
+
+def status_before_award(application):
+    """The status the application had before it was last marked Awarded."""
+    change = application.status_changes.filter(to_status=Application.Status.AWARDED).order_by("-changed_at").first()
+    if change and change.from_status and change.from_status != Application.Status.AWARDED:
+        return change.from_status
+    return Application.Status.PENDING_AWARD
+
+
+@transaction.atomic
+def delete_award(award, user=None, move_to=None, delete_tasks=True, reason=""):
+    """Delete an award record (budget years go with it) and optionally its generated tasks.
+
+    The application moves to `move_to` unless that is Awarded, in which case it stays Awarded with
+    no award record so a fresh one can be created. Returns a summary dict for the confirmation message.
+    """
+    app = award.application
+    label = award.award_number or "award record"
+    summary = {"periods": award.periods.count(), "tasks": 0, "status": None}
+    if delete_tasks:
+        summary["tasks"] = award_generated_tasks(award).delete()[1].get("grants.Task", 0)
+    award.delete()
+    note = f"Award record deleted{': ' + reason if reason else ''}"
+    log_activity(app, user, Activity.Kind.AWARD, f"Deleted {label}" + (f" ({reason})" if reason else ""))
+    if move_to and move_to != app.status:
+        change_status(app, move_to, user, note)
+        app.refresh_from_db()
+        fields = []
+        if move_to not in Application.DECIDED and app.decision_on:
+            app.decision_on = None
+            fields.append("decision_on")
+        if move_to in Application.PRE_SUBMISSION and app.submitted_on:
+            app.submitted_on = None
+            fields.append("submitted_on")
+        if fields:
+            app.save(update_fields=fields + ["updated_at"])
+        summary["status"] = app.get_status_display()
+    return summary
 
 
 # ---------------------------------------------------------------------------

@@ -403,6 +403,28 @@ class ImportForm(forms.Form):
     dry_run = forms.BooleanField(required=False, initial=True, label="Preview only (don't save)")
 
 
+class AwardDeleteForm(forms.Form):
+    move_to = forms.ChoiceField(label="Move the application to")
+    delete_tasks = forms.BooleanField(required=False, initial=True)
+    reason = forms.CharField(required=False, max_length=200, label="Reason (optional)",
+                             widget=forms.TextInput(attrs={"placeholder": "e.g. marked awarded by mistake"}))
+    confirm = forms.CharField(label="Type DELETE to confirm", max_length=10,
+                              widget=forms.TextInput(attrs={"autocomplete": "off", "spellcheck": "false"}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["move_to"].choices = [
+            (value, "Keep it Awarded (I'll create a new award record)" if value == Application.Status.AWARDED else label)
+            for value, label in Application.Status.choices
+        ]
+
+    def clean_confirm(self):
+        value = self.cleaned_data["confirm"].strip()
+        if value.upper() != "DELETE":
+            raise forms.ValidationError("Type DELETE to confirm.")
+        return value
+
+
 class OpportunityImportForm(forms.Form):
     source = forms.CharField(
         required=False, max_length=1000, label="Link or announcement number",

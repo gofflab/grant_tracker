@@ -760,6 +760,7 @@ class Award(TimeStamped):
     class Status(models.TextChoices):
         ACTIVE = "active", "Active"
         NCE = "nce", "No-cost extension"
+        ENDED = "ended", "Ended"
         CLOSING = "closing", "Close-out"
         CLOSED = "closed", "Closed"
         SUSPENDED = "suspended", "Suspended"

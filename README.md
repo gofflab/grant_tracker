@@ -25,7 +25,8 @@ It runs as a set of Docker containers. Every record, including uploaded document
 - **Notes and activity**: team notes (Markdown) and an activity timeline, plus field-level change history.
 
 **After the award**
-- Award record with award number, project period, no-cost extension, account number and grants specialist.
+- Award record with award number, project period, no-cost extension, account number and grants specialist. Status runs Active, No-cost extension, **Ended** (project period over), Close-out, Closed, plus Suspended and Terminated; once the end date passes, the award page offers a one-click *Mark ended*.
+- **Delete an award created by mistake** (Owner only, from the award's ⋯ menu): the confirmation lists what is deleted (award details, budget years, optionally the tasks it generated) and what is kept (the application, documents, team, reviews), warns when the award holds real data such as an award number or spending, moves the application back to its previous status, and requires typing DELETE.
 - **Budget years** created automatically and editable as each Notice of Award arrives, with optional spent-to-date for a burn bar.
 - **Reporting schedule** generated from the dates: NIH SNAP annual RPPRs (15th of the month before the budget year ends), multi-year funded RPPRs, and final RPPR, FFR and Final Invention Statement at 120 days; or annual plus final reports for other funders. Regeneration never touches completed tasks.
 - An **award setup checklist** runs automatically: review NoA terms, confirm account, effort allocations, subawards, kick-off, data repositories, then renewal planning at 18 months and an NCE decision at 4 months before the end.

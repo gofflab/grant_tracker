@@ -50,7 +50,14 @@
 </div>
 
 {# Contextual next step #}
-{% if app.status_group == 'preparing' and app.next_deadline %}
+{% if award and app.status != 'awarded' %}
+<div class="alert warn">
+  {% icon 'triangle-alert' %}
+  <div style="flex:1">This application is marked {{ app.get_status_display }} but still has an award record{% if award.award_number %} ({{ award.award_number }}){% endif %}, so it appears under Awards.</div>
+  <a class="btn sm" href="{{ award.get_absolute_url }}">View award</a>
+  {% if user.is_owner %}<button class="btn sm danger" hx-get="{% url 'grants:award_delete' award.pk %}" hx-target="#modal">{% icon 'trash-2' 14 %} Delete award record</button>{% endif %}
+</div>
+{% elif app.status_group == 'preparing' and app.next_deadline %}
 <div class="alert {% if app.next_deadline.1|due_class == 'due-soon' or app.next_deadline.1|due_class == 'due-overdue' %}warn{% else %}info{% endif %}">
   {% icon 'clock' %}
   <div class="grow" style="flex:1"><strong>{{ app.next_deadline.0 }} deadline {{ app.next_deadline.1|days_until }}</strong> ({{ app.next_deadline.1|date:"D, M j" }}).
