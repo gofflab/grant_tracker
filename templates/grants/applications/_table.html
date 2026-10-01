@@ -1,0 +1,50 @@
+{% load gt %}<div class="card">
+  {% if page.object_list %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr>
+      <th style="width:28px"></th>
+      <th><a href="{% querystring sort='title' partial=None page=None %}" class="{% if sort == 'title' %}sorted{% endif %}">Application</a></th>
+      <th><a href="{% querystring sort='status' partial=None page=None %}" class="{% if sort == 'status' %}sorted{% endif %}">Status</a></th>
+      <th><a href="{% querystring sort='funder' partial=None page=None %}" class="{% if sort == 'funder' %}sorted{% endif %}">Funder</a></th>
+      <th>Role</th>
+      <th><a href="{% if sort == 'deadline' %}{% querystring sort='-deadline' partial=None page=None %}{% else %}{% querystring sort='deadline' partial=None page=None %}{% endif %}" class="{% if sort == 'deadline' or sort == '-deadline' %}sorted{% endif %}">Deadline</a></th>
+      <th><a href="{% querystring sort='submitted' partial=None page=None %}" class="{% if sort == 'submitted' %}sorted{% endif %}">Submitted</a></th>
+      <th class="num"><a href="{% querystring sort='amount' partial=None page=None %}" class="{% if sort == 'amount' %}sorted{% endif %}">Requested</a></th>
+      <th class="num">Score</th>
+    </tr></thead>
+    <tbody>
+    {% for app in page %}
+      <tr>
+        <td>{% if app.is_starred %}<span title="Starred" style="color:var(--series-4)">{% icon 'star' 14 %}</span>{% endif %}</td>
+        <td class="title-cell">
+          <a href="{{ app.get_absolute_url }}">{{ app.display_title }}</a>
+          <small>{% if app.short_name %}{{ app.title|truncatechars:70 }} · {% endif %}{{ app.get_submission_type_display }}{% if app.submission_type == 'resubmission' %} ({{ app.resubmission_label }}){% endif %}</small>
+          {% if app.tags.all %}<div class="chips" style="margin-top:4px">{% for t in app.tags.all %}{% tag_chip t %}{% endfor %}</div>{% endif %}
+        </td>
+        <td>{% status_badge app %}</td>
+        <td>{{ app.funder.display_name|default:"—" }}{% if app.mechanism %}<br><small class="muted">{{ app.mechanism }}{% if app.sponsor_unit %} · {{ app.sponsor_unit }}{% endif %}</small>{% endif %}</td>
+        <td class="nowrap">{{ app.get_role_display }}</td>
+        <td class="nowrap">
+          {% if app.sponsor_deadline %}
+            <span class="due {% if app.status_group == 'preparing' %}{{ app.sponsor_deadline|due_class }}{% else %}due-later{% endif %}">{{ app.sponsor_deadline|date:"M j, Y" }}</span>
+            {% if app.next_deadline %}<br><small class="muted">{{ app.next_deadline.0 }} {{ app.next_deadline.1|days_until }}</small>{% endif %}
+          {% else %}<span class="muted">—</span>{% endif %}
+        </td>
+        <td class="nowrap">{{ app.submitted_on|date:"M j, Y"|default:"—" }}</td>
+        <td class="num">{{ app.requested_total|money_short }}</td>
+        <td class="num nowrap">{% if app.impact_score is not None %}{{ app.impact_score|num }}{% if app.percentile is not None %} <small class="muted">/ {{ app.percentile|num }}%ile</small>{% endif %}{% elif app.review_outcome == 'not_discussed' %}<small class="muted">ND</small>{% else %}—{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <div class="card-foot row">
+    <span>{{ total }} application{{ total|pluralize }}</span>
+    <span class="spacer"></span>
+    {% if page.has_previous %}<a class="btn sm" href="{% querystring page=page.previous_page_number partial=None %}">{% icon 'chevron-left' 14 %} Prev</a>{% endif %}
+    {% if page.paginator.num_pages > 1 %}<span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>{% endif %}
+    {% if page.has_next %}<a class="btn sm" href="{% querystring page=page.next_page_number partial=None %}">Next {% icon 'chevron-right' 14 %}</a>{% endif %}
+  </div>
+  {% else %}
+  <div class="empty">{% icon 'file-text' 32 %}<h3>No applications match</h3><p>Try clearing filters{% if user.can_edit %}, or <a href="{% url 'grants:application_create' %}">add one</a>{% endif %}.</p></div>
+  {% endif %}
+</div>

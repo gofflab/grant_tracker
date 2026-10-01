@@ -1,0 +1,58 @@
+{% load gt %}<div id="section-feedback" hx-get="{% url 'grants:application_section' app.pk 'feedback' %}" hx-trigger="refresh-feedback from:body" hx-swap="outerHTML">
+<div class="card mb-2">
+  <div class="card-head">
+    <h2>Peer review &amp; feedback</h2>
+    {% if user.can_edit %}<div class="actions">
+      <button class="btn sm" hx-get="{% url 'grants:document_create' %}?application={{ app.pk }}&category=review" hx-target="#modal">{% icon 'upload' 14 %} Upload summary statement</button>
+      <button class="btn sm primary" hx-get="{% url 'grants:feedback_create' app.pk %}" hx-target="#modal">{% icon 'plus' 14 %} Add feedback</button>
+    </div>{% endif %}
+  </div>
+  <div class="card-body">
+    <div class="row wrap" style="gap:28px">
+      <div><div class="stat-label">Outcome</div><div style="font-weight:600;margin-top:2px">{{ app.get_review_outcome_display|default:"—" }}</div></div>
+      <div><div class="stat-label">Score</div><div style="font-weight:600;margin-top:2px">{{ app.impact_score|num|default:"—" }}</div></div>
+      <div><div class="stat-label">Percentile</div><div style="font-weight:600;margin-top:2px">{{ app.percentile|num|default:"—" }}</div></div>
+      <div><div class="stat-label">Panel</div><div style="font-weight:600;margin-top:2px">{{ app.review_panel|default:"—" }}</div></div>
+      {% if app.payline_note %}<div><div class="stat-label">Funding context</div><div style="margin-top:2px">{{ app.payline_note }}</div></div>{% endif %}
+    </div>
+    <p class="small muted mt-1 mb-0">Edit scores via <em>Change status → Reviewed</em> or <em>Edit</em>. Record each reviewer's critique below; tag recurring themes to spot patterns across submissions in Analytics.</p>
+  </div>
+</div>
+{% if feedback %}
+<div class="stack">
+{% for fb in feedback %}
+  <div class="card">
+    <div class="card-head">
+      <h2>{{ fb.reviewer_label|default:fb.get_source_display }}</h2>
+      <span class="muted small">{{ fb.get_source_display }}</span>
+      {% if fb.overall_score %}<span class="badge plain">Score {{ fb.overall_score }}</span>{% endif %}
+      <div class="actions">
+        {% if fb.document %}<a class="btn ghost sm" href="{% url 'grants:document_download' fb.document.pk %}">{% icon 'file' 14 %} Source</a>{% endif %}
+        {% if user.can_edit %}
+        <button class="btn ghost sm icon-only" hx-get="{% url 'grants:feedback_edit' fb.pk %}" hx-target="#modal" aria-label="Edit">{% icon 'pencil' 14 %}</button>
+        <button class="btn ghost sm icon-only" hx-get="{% url 'grants:feedback_delete' fb.pk %}" hx-target="#modal" aria-label="Delete">{% icon 'trash-2' 14 %}</button>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card-body">
+      {% if fb.criteria.all %}
+      <table class="table compact mb-2" style="max-width:640px">
+        <thead><tr><th>Criterion</th><th>Score</th><th>Note</th></tr></thead>
+        <tbody>{% for c in fb.criteria.all %}<tr><td>{{ c.criterion }}</td><td class="tnum">{{ c.score|default:"—" }}</td><td class="small ink-2">{{ c.comment }}</td></tr>{% endfor %}</tbody>
+      </table>
+      {% endif %}
+      <div class="grid grid-2">
+        <div class="prose"><div class="label" style="color:var(--good)">Strengths</div>{{ fb.strengths|markdown|default:"<p class='muted'>—</p>" }}</div>
+        <div class="prose"><div class="label" style="color:var(--bad)">Weaknesses</div>{{ fb.weaknesses|markdown|default:"<p class='muted'>—</p>" }}</div>
+      </div>
+      {% if fb.comments %}<div class="prose mt-1"><div class="label">Other comments</div>{{ fb.comments|markdown }}</div>{% endif %}
+      {% if fb.response_plan %}<div class="prose mt-1 alert info" style="display:block"><div class="label">Planned response</div>{{ fb.response_plan|markdown }}</div>{% endif %}
+      {% if fb.themes.all %}<div class="chips mt-1">{% for t in fb.themes.all %}{% tag_chip t %}{% endfor %}</div>{% endif %}
+    </div>
+  </div>
+{% endfor %}
+</div>
+{% else %}
+<div class="card"><div class="empty">{% icon 'message-square' 28 %}<h3>No review feedback recorded</h3><p>After review, add the summary statement and each reviewer's strengths and weaknesses.</p></div></div>
+{% endif %}
+</div>

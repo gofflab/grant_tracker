@@ -1,0 +1,15 @@
+{% extends base_template %}
+{% block form_body %}
+<div class="form-grid">
+  {% include "_form_errors.html" %}
+  {% include "_field.html" with field=form.title span="span-12" %}
+  {% include "_field.html" with field=form.application span="span-12" %}
+  {% include "_field.html" with field=form.category span="span-4" %}
+  {% include "_field.html" with field=form.status span="span-4" %}
+  {% include "_field.html" with field=form.priority span="span-4" %}
+  {% include "_field.html" with field=form.due_date %}
+  {% include "_field.html" with field=form.assignee %}
+  {% include "_field.html" with field=form.description span="span-12" %}
+  {% if task.auto_key %}<p class="field span-12 help">Generated from the award's reporting schedule. If you change the due date, regenerating the schedule will reset it unless the task is done.</p>{% endif %}
+</div>
+{% endblock %}

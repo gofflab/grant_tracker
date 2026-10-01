@@ -1,0 +1,18 @@
+# HTTPS reverse proxy. SITE_ADDRESS is a hostname (automatic Let's Encrypt certificate),
+# "localhost" (Caddy's local CA, for testing), or ":80" for plain HTTP behind another proxy.
+{
+	admin off
+}
+
+{$SITE_ADDRESS:localhost} {
+	{$CADDY_TLS}
+	encode zstd gzip
+	request_body {
+		max_size 60MB
+	}
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000"
+	}
+	reverse_proxy web:8000
+}

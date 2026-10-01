@@ -1,0 +1,34 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}Import applications{% endblock %}
+{% block content %}
+<div class="page-head"><div class="titles"><h1>Import applications from CSV</h1>
+  <div class="subtitle">Load your submission history from a spreadsheet so success rates and trends are meaningful from day one.</div></div>
+  <div class="actions"><a class="btn" href="{% url 'grants:import_template' %}">{% icon 'download' %} Download template</a></div></div>
+<div class="grid grid-main">
+  <div class="card"><div class="card-body">
+    <form method="post" enctype="multipart/form-data" class="form-grid">{% csrf_token %}
+      {% include "_form_errors.html" %}
+      {% include "_field.html" with field=form.csv_file span="span-12" %}
+      {% include "_field.html" with field=form.dry_run span="span-12" %}
+      <div class="field span-12"><button class="btn primary" type="submit">{% icon 'import' %} Upload</button></div>
+    </form>
+    {% if results %}
+    <hr>
+    <div class="alert {% if err_count %}warn{% else %}good{% endif %}">{% icon 'circle-check' %}<div>
+      {% if dry_run %}<strong>Preview:</strong> {{ ok_count }} row{{ ok_count|pluralize }} ready, {{ err_count }} with problems. Nothing was saved. Fix any errors, untick <em>Preview only</em> and upload again.
+      {% else %}<strong>Imported {{ ok_count }} application{{ ok_count|pluralize }}.</strong>{% if err_count %} {{ err_count }} row{{ err_count|pluralize }} skipped.{% endif %} <a href="{% url 'grants:application_list' %}">View applications</a>{% endif %}
+    </div></div>
+    <div class="table-wrap"><table class="table compact">
+      <thead><tr><th>Line</th><th>Title</th><th>Result</th></tr></thead>
+      <tbody>{% for r in results %}<tr><td class="tnum">{{ r.line }}</td><td>{{ r.title|truncatechars:70 }}</td>
+        <td>{% if r.ok %}<span class="badge s-awarded plain">OK</span> <span class="small muted">{{ r.status }}{% if r.funder %} · {{ r.funder }}{% endif %}</span>{% else %}<span class="badge s-not_funded plain">Error</span> <span class="small">{{ r.errors|join:"; " }}</span>{% endif %}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% endif %}
+  </div></div>
+  <div class="card"><div class="card-head"><h2>Columns</h2></div><div class="card-body small">
+    <p>Only <code>title</code> is required. Unknown funders are created automatically. Dates can be <code>2025-06-05</code> or <code>6/5/2025</code>; amounts may include <code>$</code>, commas, or <code>K</code>/<code>M</code>.</p>
+    <p class="mb-1">Status, role and type accept the labels shown in the app (e.g. “Not funded”, “Multiple PI”, “Resubmission”). Awarded rows with award dates also create an award record.</p>
+    <div class="chips">{% for c in columns %}<code class="chip chip-gray">{{ c }}</code>{% endfor %}</div>
+  </div></div>
+</div>
+{% endblock %}

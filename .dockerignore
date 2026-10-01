@@ -1,0 +1,10 @@
+.git
+.venv
+.env
+.env.*
+!.env.example
+backups
+staticfiles
+**/__pycache__
+*.pyc
+docs

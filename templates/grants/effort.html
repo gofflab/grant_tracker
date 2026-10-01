@@ -1,0 +1,56 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}Effort{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="titles"><h1>Effort</h1><div class="subtitle">Committed person-months across active awards, and what pending applications would add. 12 person-months = 100%.</div></div>
+  <div class="actions"><a class="btn" href="{% url 'grants:other_support' %}">{% icon 'file-spreadsheet' %} Current &amp; Pending report</a></div>
+</div>
+
+<div class="card mb-2">
+  <div class="card-head"><h2>Everyone, today</h2></div>
+  {% if rows %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Person</th><th class="num">Active PM</th><th class="num">Active %</th><th style="min-width:180px">Committed</th><th class="num">Pending PM</th><th class="num">If all funded</th><th>Projects</th></tr></thead>
+    <tbody>{% for r in rows %}
+      <tr>
+        <td class="title-cell"><a href="?person={{ r.person.pk }}">{{ r.person }}</a><small>{{ r.person.position|default:r.person.get_kind_display }}</small></td>
+        <td class="num effort-cell">{{ r.active_pm|pm }}</td>
+        <td class="num effort-cell {% if r.active_pct > 100 %}effort-over{% elif r.active_pct > 90 %}effort-high{% endif %}">{{ r.active_pct }}%</td>
+        <td><div class="progress {% if r.active_pct > 100 %}bad{% elif r.active_pct > 90 %}warn{% endif %}"><span style="width:{% if r.active_pct > 100 %}100{% else %}{{ r.active_pct }}{% endif %}%"></span></div></td>
+        <td class="num effort-cell">{{ r.pending_pm|pm }}</td>
+        <td class="num effort-cell {% if r.combined_pct > 100 %}effort-over{% endif %}">{{ r.combined_pct }}%{% if r.combined_pct > 100 %} <span title="Would exceed 100% if everything pending is funded">{% icon 'triangle-alert' 13 %}</span>{% endif %}</td>
+        <td class="small">
+          {% for l in r.active %}<a href="{{ l.application.get_absolute_url }}#team">{{ l.application.display_title|truncatechars:28 }}</a> <span class="muted">{{ l.person_months|pm }}</span>{% if not forloop.last %} · {% endif %}{% endfor %}
+          {% if r.pending %}<div class="muted">Pending: {% for l in r.pending %}<a href="{{ l.application.get_absolute_url }}#team">{{ l.application.display_title|truncatechars:24 }}</a> {{ l.person_months|pm }}{% if not forloop.last %} · {% endif %}{% endfor %}</div>{% endif %}
+          {% if r.future %}<div class="muted">Starting later: {% for l in r.future %}{{ l.application.display_title|truncatechars:24 }} {{ l.person_months|pm }}{% if not forloop.last %} · {% endif %}{% endfor %}</div>{% endif %}
+        </td>
+      </tr>{% endfor %}
+    </tbody>
+  </table></div>
+  <div class="card-foot">Over 100% active effort is flagged in red. Pending effort usually gets negotiated down at Just-in-Time; watch the “if all funded” column before submitting.</div>
+  {% else %}
+  <div class="empty">{% icon 'gauge' 32 %}<h3>No effort recorded</h3><p>Add people with person-months on the <em>Team &amp; effort</em> tab of awarded or submitted applications.</p></div>
+  {% endif %}
+</div>
+
+{% if selected and chart %}
+<div class="card">
+  <div class="card-head"><h2>{{ selected }}: effort by year</h2>
+    <form method="get" class="actions" x-data>
+      <select name="person" class="input-sm" @change="$el.form.submit()" aria-label="Person">
+        {% for p in people %}<option value="{{ p.pk }}" {% if p.pk == selected.pk %}selected{% endif %}>{{ p }}</option>{% endfor %}
+      </select>
+    </form>
+  </div>
+  <div class="card-body">
+    <div class="chart-box"><canvas data-chart="effort-data" role="img" aria-label="Person-months per year by project"></canvas></div>
+    <script type="application/json" id="effort-data">{{ chart.spec|safe }}</script>
+    <p class="chart-note">Calendar-year person-months, prorated by each commitment's dates. 12 PM is full time.</p>
+    <details class="table-view"><summary>Show as table</summary>
+      <div class="table-wrap"><table class="table compact"><thead><tr><th>Project</th>{% for y in chart.years %}<th class="num">{{ y }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for app, pending, values in chart.rows %}<tr><td>{{ app.display_title }}{% if pending %} <span class="muted">(pending)</span>{% endif %}</td>{% for v in values %}<td class="num">{{ v|pm }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
+    </details>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

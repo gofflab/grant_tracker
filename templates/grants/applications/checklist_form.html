@@ -1,0 +1,11 @@
+{% extends base_template %}
+{% block form_body %}
+<div class="form-grid">
+  {% include "_form_errors.html" %}
+  {% include "_field.html" with field=form.template span="span-12" %}
+  <p class="field span-12 help mb-0">
+    {% if app.sponsor_deadline %}Due dates count back from the sponsor deadline ({{ app.sponsor_deadline|date:"M j, Y" }}){% if app.internal_deadline %} and internal deadline ({{ app.internal_deadline|date:"M j" }}){% endif %}.{% else %}This application has no sponsor deadline yet, so tasks will be created without due dates.{% endif %}
+    Tasks that already exist with the same title are skipped. Edit templates under Settings → Checklist templates.
+  </p>
+</div>
+{% endblock %}

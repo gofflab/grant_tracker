@@ -1,0 +1,12 @@
+{% load gt %}{% if groups %}
+<div class="stack">
+{% for label, items in groups %}
+  <div class="card">
+    <div class="card-head"><h2 {% if label == 'Overdue' %}class="due-overdue"{% endif %}>{{ label }}</h2><span class="muted small">{{ items|length }}</span></div>
+    <ul class="list">{% for t in items %}{% include "grants/tasks/_row.html" %}{% endfor %}</ul>
+  </div>
+{% endfor %}
+</div>
+{% else %}
+<div class="card"><div class="empty">{% icon 'circle-check' 32 %}<h3>All clear</h3><p>No tasks match. Apply a checklist template on an application to generate its to-do list.</p></div></div>
+{% endif %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}Calendar{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="titles"><h1>Calendar</h1><div class="subtitle">Deadlines, reviews, tasks, reports and award end dates.</div></div>
+  <div class="actions"><a class="btn" href="{% url 'accounts:profile' %}">{% icon 'calendar' %} Subscribe in Google Calendar / Outlook</a></div>
+</div>
+<div id="cal-month">{% include "grants/calendar/_month.html" %}</div>
+{% endblock %}

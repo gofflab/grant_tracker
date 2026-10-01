@@ -1,0 +1,11 @@
+{% load gt %}<details class="table-view">
+  <summary>Show as table</summary>
+  <div class="table-wrap"><table class="table compact">
+    <thead><tr><th></th>{% for l in labels %}<th class="num">{{ l }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr><td>{{ r.name }}</td>{% for v in r.values %}<td class="num">{% if fmt == "money" %}{{ v|money }}{% elif fmt == "pct" %}{{ v }}%{% elif fmt == "pm" %}{{ v|pm }}{% else %}{{ v }}{% endif %}</td>{% endfor %}</tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+</details>

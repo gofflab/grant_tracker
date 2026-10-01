@@ -1,0 +1,72 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<div class="page-head"><div class="titles"><h1>Settings</h1><div class="subtitle">Reference data used across the portal.</div></div>
+  <div class="actions">{% if user.is_owner %}<a class="btn" href="{% url 'accounts:user_list' %}">{% icon 'users' %} Users &amp; roles</a>{% endif %}</div></div>
+<div class="tabs">
+  <a class="tab {% if tab == 'funders' %}active{% endif %}" href="?tab=funders">Funders</a>
+  <a class="tab {% if tab == 'people' %}active{% endif %}" href="?tab=people">People</a>
+  <a class="tab {% if tab == 'tags' %}active{% endif %}" href="?tab=tags">Tags</a>
+  <a class="tab {% if tab == 'templates' %}active{% endif %}" href="?tab=templates">Checklist templates</a>
+</div>
+
+{% if tab == 'funders' %}
+<div class="card">
+  <div class="card-head"><h2>Funders</h2><span class="muted small">The default reporting schedule is applied to new awards from each funder.</span>
+    {% if user.can_edit %}<div class="actions"><button class="btn sm primary" hx-get="{% url 'grants:ref_create' 'funders' %}" hx-target="#modal">{% icon 'plus' 14 %} Add funder</button></div>{% endif %}</div>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Name</th><th>Type</th><th>Default reporting</th><th class="num">Applications</th><th class="num">Opportunities</th><th></th></tr></thead>
+    <tbody>{% for f in items %}<tr>
+      <td class="title-cell"><span style="font-weight:550">{{ f.name }}</span>{% if f.short_name %}<small>{{ f.short_name }}</small>{% endif %}</td>
+      <td>{{ f.get_funder_type_display }}</td><td class="small">{{ f.get_default_reporting_display }}</td>
+      <td class="num"><a href="{% url 'grants:application_list' %}?funder={{ f.pk }}">{{ f.n_apps }}</a></td><td class="num">{{ f.n_opps }}</td>
+      <td class="right nowrap">{% if user.can_edit %}{% include "grants/settings/_row_actions.html" with kind="funders" obj=f %}{% endif %}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% elif tab == 'people' %}
+<div class="filters">
+  <a class="btn sm {% if not kind %}active{% endif %}" href="?tab=people">Everyone</a>
+  {% for v, l in kinds %}<a class="btn sm {% if kind == v %}active{% endif %}" href="?tab=people&kind={{ v }}">{{ l }}</a>{% endfor %}
+</div>
+<div class="card">
+  <div class="card-head"><h2>People</h2><span class="muted small">Lab members, collaborators, program officers and administrators. Link your own record to your login so Effort and Current &amp; Pending default to you.</span>
+    {% if user.can_edit %}<div class="actions"><button class="btn sm primary" hx-get="{% url 'grants:ref_create' 'people' %}" hx-target="#modal">{% icon 'plus' 14 %} Add person</button></div>{% endif %}</div>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Name</th><th>Type</th><th>Institution</th><th>Email</th><th>Login</th><th class="num">Projects</th><th></th></tr></thead>
+    <tbody>{% for p in items %}<tr {% if not p.is_active %}class="muted"{% endif %}>
+      <td class="title-cell"><span style="font-weight:550">{{ p }}</span>{% if p.position %}<small>{{ p.position }}</small>{% endif %}</td>
+      <td>{{ p.get_kind_display }}</td><td>{{ p.institution|default:"—" }}</td>
+      <td>{% if p.email %}<a href="mailto:{{ p.email }}">{{ p.email }}</a>{% else %}—{% endif %}</td>
+      <td>{{ p.user.username|default:"—" }}</td><td class="num">{{ p.n }}</td>
+      <td class="right nowrap">{% if user.can_edit %}{% include "grants/settings/_row_actions.html" with kind="people" obj=p %}{% endif %}</td>
+    </tr>{% empty %}<tr><td colspan="7" class="muted">No people yet.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% elif tab == 'tags' %}
+<div class="card">
+  <div class="card-head"><h2>Tags</h2><span class="muted small">Topic tags group applications and opportunities by theme. Critique themes classify reviewer feedback.</span>
+    {% if user.can_edit %}<div class="actions"><button class="btn sm primary" hx-get="{% url 'grants:ref_create' 'tags' %}" hx-target="#modal">{% icon 'plus' 14 %} Add tag</button></div>{% endif %}</div>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Tag</th><th>Kind</th><th class="num">Applications</th><th class="num">Opportunities</th><th class="num">Reviews</th><th></th></tr></thead>
+    <tbody>{% for t in items %}<tr>
+      <td>{% tag_chip t %}</td><td>{{ t.get_kind_display }}</td>
+      <td class="num">{% if t.n_apps %}<a href="{% url 'grants:application_list' %}?tag={{ t.pk }}">{{ t.n_apps }}</a>{% else %}0{% endif %}</td><td class="num">{{ t.n_opps }}</td><td class="num">{{ t.n_feedback }}</td>
+      <td class="right nowrap">{% if user.can_edit %}{% include "grants/settings/_row_actions.html" with kind="tags" obj=t %}{% endif %}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% elif tab == 'templates' %}
+<div class="card">
+  <div class="card-head"><h2>Checklist templates</h2><span class="muted small">Reusable task lists with due dates relative to a deadline or award date.</span>
+    {% if user.can_edit %}<div class="actions"><a class="btn sm primary" href="{% url 'grants:template_create' %}">{% icon 'plus' 14 %} New template</a></div>{% endif %}</div>
+  <ul class="list">{% for t in items %}
+    <li><div class="grow"><a class="title" href="{% url 'grants:template_edit' t.pk %}">{{ t.name }}</a>
+      <div class="meta"><span>{{ t.get_applies_to_display }}</span><span>{{ t.n }} items</span>{% if t.mechanisms %}<span>{{ t.mechanisms }}</span>{% endif %}{% if t.is_default %}<span class="badge s-awarded plain">Automatic</span>{% endif %}</div>
+      {% if t.description %}<div class="small ink-2">{{ t.description }}</div>{% endif %}</div>
+      {% if user.can_edit %}<button class="btn ghost sm icon-only" hx-get="{% url 'grants:template_delete' t.pk %}" hx-target="#modal" aria-label="Delete">{% icon 'trash-2' 14 %}</button>{% endif %}
+    </li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endblock %}

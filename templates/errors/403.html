@@ -1,0 +1,4 @@
+{% extends user.is_authenticated|yesno:"base.html,accounts/_auth_base.html" %}{% load gt %}
+{% block title %}Not allowed{% endblock %}
+{% block content %}<div class="card"><div class="empty">{% icon 'lock' 32 %}<h3>Not allowed</h3><p>{{ message }}</p><a class="btn" href="{% url 'grants:dashboard' %}">Back to dashboard</a></div></div>{% endblock %}
+{% block auth %}<h1 style="font-size:18px">Not allowed</h1><p>{{ message }}</p><a class="btn" href="{% url 'accounts:login' %}">Sign in</a>{% endblock %}

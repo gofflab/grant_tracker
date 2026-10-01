@@ -1,0 +1,8 @@
+{% extends base_template %}
+{% block form_body %}
+<div class="form-grid">
+  {% include "_form_errors.html" %}
+  {% for field in form.hidden_fields %}{{ field }}{% endfor %}
+  {% for field in form.visible_fields %}{% if field.field.widget.attrs.rows %}{% include "_field.html" with field=field span="span-12" %}{% else %}{% include "_field.html" with field=field %}{% endif %}{% endfor %}
+</div>
+{% endblock %}

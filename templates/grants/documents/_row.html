@@ -1,0 +1,26 @@
+{% load gt %}<li>
+  <span class="file-ico {{ d.extension }}">{{ d.extension|default:"file"|truncatechars:5 }}</span>
+  <div class="grow">
+    <span class="title">{% if d.has_file or d.external_url %}<a href="{% url 'grants:document_download' d.pk %}{% if d.content_type == 'application/pdf' %}?inline=1{% endif %}" {% if d.external_url and not d.has_file %}target="_blank" rel="noopener"{% elif d.content_type == 'application/pdf' %}target="_blank" rel="noopener"{% endif %}>{{ d.title }}</a>{% else %}{{ d.title }}{% endif %}</span>
+    <div class="meta">
+      <span>{{ d.get_category_display }}</span>
+      {% if d.version %}<span>{{ d.version }}</span>{% endif %}
+      {% if d.is_final %}<span class="badge s-awarded plain">Final</span>{% endif %}
+      {% if d.restricted %}<span class="badge p-high plain" title="Owner-only">{% icon 'lock' 11 %} Restricted</span>{% endif %}
+      {% if show_app and d.application %}<a href="{{ d.application.get_absolute_url }}">{{ d.application.display_title|truncatechars:40 }}</a>{% endif %}
+      {% if d.has_file %}<span>{{ d.size|filesizeformat }}</span>{% elif d.external_url %}<span>{% icon 'external-link' 11 %} link</span>{% endif %}
+      <span>{{ d.created_at|date:"M j, Y" }}{% if d.uploaded_by %} · {{ d.uploaded_by.first_name|default:d.uploaded_by.username }}{% endif %}</span>
+    </div>
+    {% if d.snippet %}<div class="small ink-2" style="margin-top:4px">…{{ d.snippet|snippet }}…</div>{% endif %}
+  </div>
+  {% if d.has_file %}<a class="btn ghost sm icon-only" href="{% url 'grants:document_download' d.pk %}" title="Download" aria-label="Download">{% icon 'download' 14 %}</a>{% endif %}
+  {% if user.can_edit %}
+  <div class="dropdown" x-data="{ open: false }" @click.outside="open = false">
+    <button class="btn ghost sm icon-only" @click="open = !open" aria-label="Document actions">{% icon 'ellipsis' 14 %}</button>
+    <div class="menu" x-show="open" x-cloak>
+      <a href="#" hx-get="{% url 'grants:document_edit' d.pk %}" hx-target="#modal" @click="open = false">{% icon 'pencil' %} Edit / replace file</a>
+      <a href="#" hx-get="{% url 'grants:document_delete' d.pk %}" hx-target="#modal" @click="open = false">{% icon 'trash-2' %} Delete</a>
+    </div>
+  </div>
+  {% endif %}
+</li>

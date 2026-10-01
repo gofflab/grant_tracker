@@ -1,0 +1,18 @@
+{% load gt %}<h2 class="mt-2 mb-1">{{ heading }}</h2>
+{% for i in items %}
+<table class="table compact mb-2" style="border:1px solid var(--border);border-radius:8px">
+  <tbody>
+    <tr><th style="width:280px;position:static">Title</th><td><a href="{{ i.app.get_absolute_url }}">{{ i.title }}</a></td></tr>
+    <tr><th style="position:static">Major goals</th><td class="prose">{{ i.goals|linebreaksbr|default:"<span class='muted'>Add major goals on the application</span>" }}</td></tr>
+    <tr><th style="position:static">Status of support</th><td>{{ i.status_label }}</td></tr>
+    <tr><th style="position:static">Project number</th><td class="mono">{{ i.number|default:"—" }}</td></tr>
+    <tr><th style="position:static">Name of PD/PI</th><td>{{ i.pi|default:"—" }}</td></tr>
+    <tr><th style="position:static">Source of support</th><td>{{ i.source|default:"—" }}</td></tr>
+    <tr><th style="position:static">Primary place of performance</th><td>{{ i.place|default:"—" }}</td></tr>
+    <tr><th style="position:static">Project / proposal dates</th><td>{{ i.start|date:"m/Y"|default:"?" }} – {{ i.end|date:"m/Y"|default:"?" }}</td></tr>
+    <tr><th style="position:static">Total award amount (incl. indirect)</th><td>{{ i.amount|money }}</td></tr>
+    <tr><th style="position:static">Person months (calendar) per budget period</th><td>{% for p in i.pm_years %}{% if p.pm %}<span class="nowrap">Year {{ p.year }} ({{ p.start.year }}): {{ p.pm|pm }} CM</span>{% if not forloop.last %}; {% endif %}{% endif %}{% empty %}<span class="muted">Add project dates and person-months</span>{% endfor %}</td></tr>
+  </tbody>
+</table>
+{% empty %}<p class="muted">None</p>
+{% endfor %}

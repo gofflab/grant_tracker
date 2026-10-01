@@ -1,0 +1,65 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}Awards{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="titles"><h1>Awards</h1><div class="subtitle">Funded projects, budgets, reporting and close-out.</div></div>
+  <div class="actions">
+    <div class="btn-group">
+      <a class="btn sm {% if view == 'active' %}active{% endif %}" href="?view=active">Active ({{ active_count }})</a>
+      <a class="btn sm {% if view == 'closed' %}active{% endif %}" href="?view=closed">Closed ({{ closed_count }})</a>
+      <a class="btn sm {% if view == 'all' %}active{% endif %}" href="?view=all">All</a>
+    </div>
+  </div>
+</div>
+<div class="stats">
+  <div class="stat"><div class="stat-label">Active awards</div><div class="stat-value">{{ active_count }}</div></div>
+  <div class="stat"><div class="stat-label">Direct costs, current budget years</div><div class="stat-value">{{ current_direct|money_short }}</div></div>
+  <div class="stat"><div class="stat-label">Total value of active awards</div><div class="stat-value">{{ active_total|money_short }}</div></div>
+  <div class="stat"><div class="stat-label">Ending within 12 months</div><div class="stat-value">{{ ending_soon|length }}</div><div class="stat-sub">{% for a in ending_soon|slice:":2" %}{{ a.application.display_title|truncatechars:24 }}{% if not forloop.last %}, {% endif %}{% endfor %}</div></div>
+</div>
+
+{% if gantt %}
+<div class="card mb-2">
+  <div class="card-head"><h2>Timeline</h2>
+    <span class="muted small"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--series-1)"></span> project period
+      <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--series-4);margin-left:10px"></span> no-cost extension
+      {% if show_pending %}<span style="display:inline-block;width:10px;height:10px;border-radius:3px;border:1px dashed var(--series-1);margin-left:10px"></span> pending (proposed){% endif %}
+      <span style="display:inline-block;width:2px;height:10px;background:var(--bad);margin-left:10px"></span> today</span>
+    <div class="actions"><a class="btn ghost sm" href="?view={{ view }}{% if not show_pending %}&pending=1{% endif %}">{% if show_pending %}Hide pending{% else %}Show pending{% endif %}</a></div>
+  </div>
+  <div class="card-body gantt">
+    <div class="gantt-axis"><span></span><div class="ticks">{% for t in gantt.ticks %}<span style="left:{{ t.left }}%">{{ t.label }}</span>{% endfor %}</div></div>
+    {% for r in gantt.rows %}
+    <div class="gantt-row">
+      <a class="gantt-label" href="{{ r.url }}" title="{{ r.label }}">{{ r.label }}</a>
+      <div class="gantt-track">
+        {% if gantt.today is not None %}<span class="gantt-today" style="left:{{ gantt.today }}%"></span>{% endif %}
+        <span class="gantt-bar {% if r.kind == 'pending' %}pending{% endif %}" style="left:{{ r.left }}%;width:{{ r.width }}%" title="{{ r.label }}"></span>
+        {% if r.nce_width %}<span class="gantt-bar nce" style="left:{{ r.nce_left }}%;width:{{ r.nce_width }}%" title="No-cost extension"></span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  {% if awards %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Project</th><th>Award no.</th><th>Status</th><th>Funder</th><th>Period</th><th>Time elapsed</th><th class="num">Total award</th></tr></thead>
+    <tbody>{% for a in awards %}
+      <tr>
+        <td class="title-cell"><a href="{{ a.get_absolute_url }}">{{ a.application.display_title }}</a><small>{{ a.application.get_role_display }}</small></td>
+        <td class="mono">{{ a.award_number|default:"—" }}</td>
+        <td>{% status_badge a.status a.get_status_display 'a' %}</td>
+        <td>{{ a.application.funder.display_name|default:"—" }}</td>
+        <td class="nowrap small">{{ a.start_date|date:"M Y" }} – {{ a.effective_end|date:"M Y" }}{% if a.is_active and a.days_remaining is not None %}<br><span class="{% if a.days_remaining < 180 %}due-soon{% else %}muted{% endif %}">{{ a.effective_end|days_until }}</span>{% endif %}</td>
+        <td style="min-width:120px">{% if a.percent_elapsed is not None %}<div class="progress {% if a.percent_elapsed > 85 %}warn{% endif %}"><span style="width:{{ a.percent_elapsed }}%"></span></div><span class="small muted">{{ a.percent_elapsed }}%</span>{% endif %}</td>
+        <td class="num">{{ a.awarded_total|money }}</td>
+      </tr>{% endfor %}
+    </tbody></table></div>
+  {% else %}
+  <div class="empty">{% icon 'award' 32 %}<h3>No awards here yet</h3><p>Mark an application <strong>Awarded</strong> to set up budget years, effort and the reporting schedule.</p></div>
+  {% endif %}
+</div>
+{% endblock %}

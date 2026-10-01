@@ -1,0 +1,33 @@
+{% load gt %}<div id="section-personnel" hx-get="{% url 'grants:application_section' app.pk 'personnel' %}" hx-trigger="refresh-personnel from:body" hx-swap="outerHTML">
+<div class="card">
+  <div class="card-head">
+    <h2>Team &amp; effort</h2>{% if total_pm %}<span class="muted small">{{ total_pm|pm }} person-months / yr total</span>{% endif %}
+    <div class="actions">
+      <a class="btn sm" href="{% url 'grants:effort' %}">{% icon 'gauge' 14 %} Effort overview</a>
+      {% if user.can_edit %}<button class="btn sm primary" hx-get="{% url 'grants:personnel_create' app.pk %}" hx-target="#modal">{% icon 'plus' 14 %} Add person</button>{% endif %}
+    </div>
+  </div>
+  {% if personnel %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Person</th><th>Role</th><th class="num">Person-months / yr</th><th class="num">Effort</th><th>Period</th><th></th></tr></thead>
+    <tbody>
+    {% for p in personnel %}
+      <tr>
+        <td class="title-cell"><span style="font-weight:550">{{ p.person }}</span>{% if p.is_key %} <span class="badge plain" title="Key personnel">Key</span>{% endif %}<small>{{ p.person.position|default:p.person.get_kind_display }}{% if p.person.institution %} · {{ p.person.institution }}{% endif %}</small></td>
+        <td>{{ p.get_role_display }}</td>
+        <td class="num">{{ p.person_months|pm }}</td>
+        <td class="num">{% if p.effort_percent is not None %}{{ p.effort_percent|num:1 }}%{% else %}—{% endif %}</td>
+        <td class="small nowrap">{% with per=p.period %}{% if per.0 %}{{ per.0|date:"M Y" }} – {{ per.1|date:"M Y"|default:"?" }}{% else %}<span class="muted">project dates</span>{% endif %}{% endwith %}</td>
+        <td class="right nowrap">{% if user.can_edit %}
+          <button class="btn ghost sm icon-only" hx-get="{% url 'grants:personnel_edit' p.pk %}" hx-target="#modal" aria-label="Edit">{% icon 'pencil' 14 %}</button>
+          <button class="btn ghost sm icon-only" hx-get="{% url 'grants:personnel_delete' p.pk %}" hx-target="#modal" aria-label="Remove">{% icon 'x' 14 %}</button>
+        {% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+  <div class="empty">{% icon 'users' 28 %}<h3>No team yet</h3><p>Add key personnel with their person-months. Effort totals and Current &amp; Pending reports are built from this.</p></div>
+  {% endif %}
+</div>
+</div>

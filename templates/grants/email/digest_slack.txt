@@ -1,0 +1,5 @@
+{% autoescape off %}*{{ site_name }}: {% if urgent %}due in the next 2 days{% else %}next {{ days }} days{% endif %}*
+{% if overdue %}:warning: *{{ overdue|length }} overdue task{{ overdue|length|pluralize }}*
+{% for t in overdue|slice:":8" %}• {{ t.title }}{% if t.application %} ({{ t.application.display_title }}){% endif %}, due {{ t.due_date|date:"M j" }}
+{% endfor %}{% endif %}{% for e in events|slice:":15" %}• {{ e.date|date:"D M j" }}: <{{ site_url }}{{ e.url }}|{{ e.title }}>
+{% endfor %}{% endautoescape %}

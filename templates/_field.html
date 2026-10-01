@@ -1,0 +1,11 @@
+{% load gt %}<div class="field {{ span|default:'' }} {% if field.errors %}has-error{% endif %} {% if field.field.widget.input_type == 'checkbox' %}check{% endif %}">
+  {% if field.field.widget.input_type == 'checkbox' %}
+    {{ field }}
+    <div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}{{ field.errors }}</div>
+  {% else %}
+    <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="muted" aria-hidden="true">*</span>{% endif %}</label>
+    {{ field }}
+    {% if field.help_text %}<span class="help">{{ field.help_text|safe }}</span>{% endif %}
+    {{ field.errors }}
+  {% endif %}
+</div>

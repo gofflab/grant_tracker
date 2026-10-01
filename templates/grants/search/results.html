@@ -1,0 +1,19 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}Search{% endblock %}
+{% block content %}
+<div class="page-head"><div class="titles"><h1>Search</h1>{% if q %}<div class="subtitle">Results for “{{ q }}”</div>{% endif %}</div></div>
+<form method="get" class="filters"><input type="search" name="q" value="{{ q }}" class="input" style="max-width:520px" placeholder="Search everything, including text inside documents" autofocus><button class="btn primary">Search</button></form>
+{% if results %}
+<div class="stack">
+  {% if results.applications %}<div class="card"><div class="card-head"><h2>Applications</h2><span class="muted small">{{ results.applications|length }}</span></div><ul class="list">
+    {% for a in results.applications %}<li><div class="grow"><a class="title" href="{{ a.get_absolute_url }}">{{ a.display_title }}</a><div class="meta"><span>{{ a.funder.display_name|default:"" }} {{ a.mechanism }}</span><span>{{ a.sponsor_deadline|date:"M Y" }}</span></div></div>{% status_badge a %}</li>{% endfor %}</ul></div>{% endif %}
+  {% if results.documents %}<div class="card"><div class="card-head"><h2>Documents</h2><span class="muted small">{{ results.documents|length }}</span></div><ul class="list">
+    {% for d in results.documents %}{% include "grants/documents/_row.html" with show_app=True %}{% endfor %}</ul></div>{% endif %}
+  {% if results.opportunities %}<div class="card"><div class="card-head"><h2>Opportunities</h2></div><ul class="list">
+    {% for o in results.opportunities %}<li><div class="grow"><a class="title" href="{{ o.get_absolute_url }}">{{ o.title }}</a><div class="meta"><span>{{ o.number }}</span><span>{{ o.funder.display_name|default:"" }}</span></div></div>{% status_badge o.status o.get_status_display 'o' %}</li>{% endfor %}</ul></div>{% endif %}
+  {% if results.tasks %}<div class="card"><div class="card-head"><h2>Tasks</h2></div><ul class="list">{% for t in results.tasks %}{% include "grants/tasks/_row.html" with show_app=True %}{% endfor %}</ul></div>{% endif %}
+  {% if results.people %}<div class="card"><div class="card-head"><h2>People</h2></div><ul class="list">{% for p in results.people %}<li><div class="grow"><span class="title">{{ p }}</span><div class="meta"><span>{{ p.get_kind_display }}</span><span>{{ p.institution }}</span><span>{{ p.email }}</span></div></div></li>{% endfor %}</ul></div>{% endif %}
+  {% if not results.applications and not results.documents and not results.opportunities and not results.tasks and not results.people %}<div class="card"><div class="empty"><h3>No matches</h3></div></div>{% endif %}
+</div>
+{% elif q %}<p class="muted">Type at least two characters.</p>{% endif %}
+{% endblock %}

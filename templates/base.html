@@ -1,0 +1,136 @@
+{% load static gt %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <meta name="color-scheme" content="light dark">
+  <meta name="htmx-config" content='{"disableInheritance": true, "historyCacheSize": 0}'>
+  <title>{% block title %}{{ SITE_NAME }}{% endblock %} · {{ SITE_NAME }}</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <script src="{% static 'js/theme-init.js' %}"></script>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script defer src="{% static 'vendor/htmx-2.0.11.min.js' %}"></script>
+  <script defer src="{% static 'vendor/sortable-1.15.7.min.js' %}"></script>
+  <script defer src="{% static 'vendor/chart-4.5.1.umd.min.js' %}"></script>
+  <script defer src="{% static 'js/app.js' %}"></script>
+  <script defer src="{% static 'vendor/alpine-3.17.4.min.js' %}"></script>
+  {% block head %}{% endblock %}
+</head>
+<body hx-boost="false" x-data="{ nav: false }">
+{% block body %}
+{% with url_name=request.resolver_match.url_name %}
+<div class="app">
+  <aside class="sidebar" :class="nav && 'open'" aria-label="Main navigation">
+    <a class="brand" href="{% url 'grants:dashboard' %}">
+      <span class="brand-mark">{% icon 'award' 18 %}</span>
+      <span>{{ SITE_NAME }}</span>
+    </a>
+
+    <nav>
+      <div class="nav-group">
+        <a class="nav-link {% if url_name == 'dashboard' %}active{% endif %}" href="{% url 'grants:dashboard' %}">{% icon 'layout-dashboard' %} Dashboard</a>
+        <a class="nav-link {% if url_name == 'calendar' %}active{% endif %}" href="{% url 'grants:calendar' %}">{% icon 'calendar' %} Calendar</a>
+        <a class="nav-link {% if url_name == 'task_list' %}active{% endif %}" href="{% url 'grants:task_list' %}">{% icon 'list-checks' %} Tasks
+          {% if nav_counts.overdue_tasks %}<span class="count alert" title="Overdue tasks">{{ nav_counts.overdue_tasks }}</span>{% endif %}
+        </a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Pipeline</div>
+        <a class="nav-link {% if url_name|slice:':11' == 'opportunity' %}active{% endif %}" href="{% url 'grants:opportunity_list' %}">{% icon 'target' %} Opportunities</a>
+        <a class="nav-link {% if url_name|slice:':11' == 'application' and url_name != 'application_board' %}active{% endif %}" href="{% url 'grants:application_list' %}">{% icon 'file-text' %} Applications
+          {% if nav_counts.open_apps %}<span class="count">{{ nav_counts.open_apps }}</span>{% endif %}
+        </a>
+        <a class="nav-link {% if url_name == 'application_board' %}active{% endif %}" href="{% url 'grants:application_board' %}">{% icon 'square-kanban' %} Board</a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Awards</div>
+        <a class="nav-link {% if url_name|slice:':5' == 'award' %}active{% endif %}" href="{% url 'grants:award_list' %}">{% icon 'award' %} Awards</a>
+        <a class="nav-link {% if url_name == 'effort' %}active{% endif %}" href="{% url 'grants:effort' %}">{% icon 'gauge' %} Effort</a>
+        <a class="nav-link {% if url_name == 'other_support' %}active{% endif %}" href="{% url 'grants:other_support' %}">{% icon 'file-spreadsheet' %} Current &amp; Pending</a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Insights &amp; records</div>
+        <a class="nav-link {% if url_name == 'analytics' %}active{% endif %}" href="{% url 'grants:analytics' %}">{% icon 'chart-column' %} Analytics</a>
+        <a class="nav-link {% if url_name|slice:':8' == 'document' %}active{% endif %}" href="{% url 'grants:document_list' %}">{% icon 'folder' %} Documents</a>
+        <a class="nav-link {% if url_name|slice:':8' == 'settings' or url_name|slice:':6' == 'person' %}active{% endif %}" href="{% url 'grants:settings' %}">{% icon 'settings' %} Settings</a>
+      </div>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="dropdown" x-data="{ open: false }" @click.outside="open = false">
+        <button class="nav-link" style="width:100%;border:0;background:none;cursor:pointer;font:inherit" @click="open = !open" :aria-expanded="open">
+          <span class="avatar sm">{{ user.initials }}</span>
+          <span style="text-align:left;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">{{ user }}<br><small class="muted">{{ user.get_role_display }}</small></span>
+          {% icon 'chevron-up' 14 %}
+        </button>
+        <div class="menu left" x-show="open" x-cloak style="bottom:calc(100% + 6px);top:auto">
+          <a href="{% url 'accounts:profile' %}">{% icon 'user' %} Profile &amp; security</a>
+          {% if user.is_owner %}<a href="{% url 'accounts:user_list' %}">{% icon 'users' %} Manage users</a>{% endif %}
+          {% if user.is_superuser %}<a href="{% url 'admin:index' %}">{% icon 'shield-check' %} Admin console</a>{% endif %}
+          <div class="sep"></div>
+          <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}
+            <button type="submit">{% icon 'log-out' %} Sign out</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-backdrop" x-show="nav" x-cloak @click="nav = false"></div>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="btn ghost icon-only menu-btn" @click="nav = !nav" aria-label="Open menu">{% icon 'menu' 18 %}</button>
+      <div class="search-wrap" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false; $refs.q.blur()">
+        {% icon 'search' %}
+        <input id="global-search" x-ref="q" class="search-input" type="search" name="q" placeholder="Search applications, opportunities, documents…  ( / )"
+               autocomplete="off" aria-label="Search"
+               hx-get="{% url 'grants:quick_search' %}" hx-trigger="input changed delay:250ms, search" hx-target="#search-results"
+               @focus="open = true" @input="open = true"
+               @keydown.enter.prevent="window.location = '{% url 'grants:search' %}?q=' + encodeURIComponent($event.target.value)">
+        <div id="search-results" class="search-results" x-show="open" x-cloak></div>
+      </div>
+      <div class="topbar-actions">
+        {% if user.can_edit %}
+        <div class="dropdown" x-data="{ open: false }" @click.outside="open = false">
+          <button class="btn primary" @click="open = !open" :aria-expanded="open">{% icon 'plus' %} <span class="hide-sm">New</span></button>
+          <div class="menu" x-show="open" x-cloak>
+            <a href="{% url 'grants:application_create' %}">{% icon 'file-text' %} Application</a>
+            <a href="{% url 'grants:opportunity_create' %}">{% icon 'target' %} Opportunity</a>
+            <a href="#" hx-get="{% url 'grants:task_create' %}" hx-target="#modal" @click="open = false">{% icon 'list-todo' %} Task</a>
+            <a href="#" hx-get="{% url 'grants:document_create' %}" hx-target="#modal" @click="open = false">{% icon 'upload' %} Library document</a>
+            <div class="sep"></div>
+            <a href="{% url 'grants:import' %}">{% icon 'import' %} Import from CSV</a>
+          </div>
+        </div>
+        {% endif %}
+        <button class="btn ghost icon-only" x-data="themeToggle" @click="cycle()" :title="'Theme: ' + label" aria-label="Toggle theme">
+          <span x-show="mode === 'light'">{% icon 'sun' 18 %}</span>
+          <span x-show="mode === 'dark'" x-cloak>{% icon 'moon' 18 %}</span>
+          <span x-show="mode === 'auto'" x-cloak>{% icon 'circle-dot' 18 %}</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="content" id="content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endwith %}
+{% endblock %}
+
+<div id="modal"></div>
+{% if messages %}<script type="application/json" id="flash-messages">[{% for m in messages %}{"message": "{{ m.message|escapejs }}", "level": "{{ m.tags|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]</script>{% endif %}
+
+<div class="toasts" x-data aria-live="polite">
+  <template x-for="t in $store.toasts.items" :key="t.id">
+    <div class="toast" :class="t.level === 'error' && 'error'" role="status">
+      <span x-text="t.message" style="flex:1"></span>
+      <button class="btn ghost sm icon-only" @click="$store.toasts.remove(t.id)" aria-label="Dismiss">{% icon 'x' 14 %}</button>
+    </div>
+  </template>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

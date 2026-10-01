@@ -1,0 +1,51 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}Applications{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="titles"><h1>Applications</h1><div class="subtitle">Every submission, from idea to decision.</div></div>
+  <div class="actions">
+    <a class="btn" href="{% url 'grants:application_export' %}?{{ request.GET.urlencode }}">{% icon 'download' %} Export CSV</a>
+    <a class="btn" href="{% url 'grants:application_board' %}">{% icon 'square-kanban' %} Board</a>
+    {% if user.can_edit %}<a class="btn primary" href="{% url 'grants:application_create' %}">{% icon 'plus' %} New application</a>{% endif %}
+  </div>
+</div>
+
+<form class="filters" id="app-filters" hx-get="{% url 'grants:application_list' %}" hx-target="#app-table" hx-push-url="true"
+      hx-trigger="change, input delay:300ms from:input[type=search]" hx-vals='{"partial": "1"}'>
+  <input type="search" name="q" class="input-sm" placeholder="Search title, ID, panel…" value="{{ request.GET.q }}" aria-label="Search applications">
+  <select name="group" class="input-sm" aria-label="Stage">
+    <option value="">All stages</option>
+    {% for v, l in groups %}<option value="{{ v }}" {% if request.GET.group == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+  </select>
+  <select name="status" class="input-sm" aria-label="Status">
+    <option value="">Any status</option>
+    {% for v, l in statuses %}<option value="{{ v }}" {% if request.GET.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+  </select>
+  <select name="funder" class="input-sm" aria-label="Funder">
+    <option value="">All funders</option>
+    {% for f in funders %}<option value="{{ f.pk }}" {% if request.GET.funder == f.pk|stringformat:'s' %}selected{% endif %}>{{ f.display_name }}</option>{% endfor %}
+  </select>
+  <select name="mechanism" class="input-sm" aria-label="Mechanism">
+    <option value="">All mechanisms</option>
+    {% for m in mechanisms %}<option value="{{ m }}" {% if request.GET.mechanism == m %}selected{% endif %}>{{ m }}</option>{% endfor %}
+  </select>
+  <select name="year" class="input-sm" aria-label="Year">
+    <option value="">Any year</option>
+    {% for y in years %}<option value="{{ y }}" {% if request.GET.year == y|stringformat:'s' %}selected{% endif %}>{{ y }}</option>{% endfor %}
+  </select>
+  <select name="role" class="input-sm" aria-label="My role">
+    <option value="">Any role</option>
+    {% for v, l in roles %}<option value="{{ v }}" {% if request.GET.role == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+  </select>
+  {% if tags %}
+  <select name="tag" class="input-sm" aria-label="Tag">
+    <option value="">Any tag</option>
+    {% for t in tags %}<option value="{{ t.pk }}" {% if request.GET.tag == t.pk|stringformat:'s' %}selected{% endif %}>{{ t.name }}</option>{% endfor %}
+  </select>
+  {% endif %}
+  <input type="hidden" name="sort" value="{{ sort }}">
+  <a class="btn ghost sm" href="{% url 'grants:application_list' %}">Clear</a>
+</form>
+
+<div id="app-table">{% include "grants/applications/_table.html" %}</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% load gt humanize %}<div id="section-activity" hx-get="{% url 'grants:application_section' app.pk 'activity' %}" hx-trigger="refresh-activity from:body" hx-swap="outerHTML">
+<div class="card">
+  {% if user.can_edit %}
+  <div class="card-body" style="border-bottom:1px solid var(--border)">
+    <form hx-post="{% url 'grants:comment_create' app.pk %}" hx-swap="none" class="stack" style="gap:8px" x-data @htmx:after-request="if ($event.detail.successful) $el.reset()">
+      {{ comment_form.body }}
+      <div class="row"><span class="muted small">Notes are visible to everyone with access.</span><span class="spacer"></span><button class="btn primary sm" type="submit">{% icon 'send' 14 %} Add note</button></div>
+    </form>
+  </div>
+  {% endif %}
+  <div class="card-body">
+    {% if items %}
+    <ul class="timeline">
+      {% for i in items %}
+      <li>
+        {% if i.kind == 'comment' %}
+          <span class="dot" style="background:var(--accent-soft);color:var(--accent-ink)">{% icon 'message-square' %}</span>
+          <div class="row"><strong>{{ i.obj.author|default:"Someone" }}</strong><span class="when">{{ i.at|naturaltime }}</span>
+            {% if user.can_edit and i.obj.author_id == user.pk or user.is_owner %}<button class="btn ghost sm icon-only" hx-post="{% url 'grants:comment_delete' i.obj.pk %}" hx-swap="none" hx-confirm="Delete this note?" aria-label="Delete note">{% icon 'x' 12 %}</button>{% endif %}</div>
+          <div class="prose" style="margin-top:2px">{{ i.obj.body|markdown }}</div>
+        {% else %}
+          <span class="dot">{% if i.kind == 'status' %}{% icon 'flag' %}{% elif i.kind == 'document' %}{% icon 'file' %}{% elif i.kind == 'task' %}{% icon 'check' %}{% elif i.kind == 'award' %}{% icon 'award' %}{% elif i.kind == 'review' %}{% icon 'message-square' %}{% elif i.kind == 'personnel' %}{% icon 'user' %}{% else %}{% icon 'pencil' %}{% endif %}</span>
+          <div class="ink-2">{{ i.obj.description }}</div>
+          <div class="when">{{ i.at|naturaltime }}{% if i.obj.actor %} · {{ i.obj.actor }}{% endif %}</div>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="small mb-0"><a href="{% url 'grants:application_history' app.pk %}">{% icon 'history' 14 %} Full field-level change history</a></p>
+    {% else %}<p class="muted mb-0">No activity yet.</p>{% endif %}
+  </div>
+</div>
+</div>

@@ -1,0 +1,47 @@
+{% extends base_template %}{% load gt %}
+{% block form_body %}
+<div class="form-grid">
+  {% include "_form_errors.html" %}
+  {% include "_field.html" with field=form.source span="span-4" %}
+  {% include "_field.html" with field=form.reviewer_label span="span-4" %}
+  {% include "_field.html" with field=form.overall_score span="span-4" %}
+
+  <div class="field span-12" x-data="formset('criteria')">
+    <label>Criterion scores</label>
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}<div class="errors">{{ formset.non_form_errors }}</div>{% endif %}
+    <div data-forms class="stack" style="gap:6px">
+      {% for f in formset %}
+      <div class="row" style="align-items:flex-start">
+        {{ f.id }}
+        <div style="flex:2">{{ f.criterion }}</div>
+        <div style="flex:0 0 110px">{{ f.score }}</div>
+        <div style="flex:3">{{ f.comment }}</div>
+        {% if f.instance.pk %}<label class="small row" title="Delete">{{ f.DELETE }} {% icon 'trash-2' 13 %}</label>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    <template data-empty-form>
+      <div class="row" style="align-items:flex-start">
+        {{ formset.empty_form.id }}
+        <div style="flex:2">{{ formset.empty_form.criterion }}</div>
+        <div style="flex:0 0 110px">{{ formset.empty_form.score }}</div>
+        <div style="flex:3">{{ formset.empty_form.comment }}</div>
+      </div>
+    </template>
+    <datalist id="criteria-suggestions">{% for s in suggestions %}<option value="{{ s }}">{% endfor %}</datalist>
+    <div><button type="button" class="btn sm" @click="add()">{% icon 'plus' 14 %} Add criterion</button></div>
+  </div>
+
+  {% include "_field.html" with field=form.strengths %}
+  {% include "_field.html" with field=form.weaknesses %}
+  {% include "_field.html" with field=form.comments %}
+  {% include "_field.html" with field=form.response_plan %}
+  <div class="field span-8">
+    <label>Critique themes</label>
+    <div class="chips">{% for cb in form.themes %}<label class="chip chip-gray" style="cursor:pointer">{{ cb.tag }} {{ cb.choice_label }}</label>{% endfor %}</div>
+  </div>
+  {% include "_field.html" with field=form.new_themes span="span-4" %}
+  {% include "_field.html" with field=form.document span="span-12" %}
+</div>
+{% endblock %}

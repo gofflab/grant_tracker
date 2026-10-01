@@ -1,0 +1,2 @@
+{% load gt %}<button class="btn ghost sm icon-only" hx-get="{% url 'grants:ref_edit' kind obj.pk %}" hx-target="#modal" aria-label="Edit">{% icon 'pencil' 14 %}</button>
+<button class="btn ghost sm icon-only" hx-get="{% url 'grants:ref_delete' kind obj.pk %}" hx-target="#modal" aria-label="Delete">{% icon 'trash-2' 14 %}</button>

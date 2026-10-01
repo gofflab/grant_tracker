@@ -1,0 +1,13 @@
+{% extends "accounts/_auth_base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block auth %}
+<h1 style="font-size:18px;margin-bottom:16px">Sign in</h1>
+<form method="post" class="form-grid">{% csrf_token %}
+  {% include "_form_errors.html" %}
+  {% include "_field.html" with field=form.username span="span-12" %}
+  {% include "_field.html" with field=form.password span="span-12" %}
+  <input type="hidden" name="next" value="{{ next }}">
+  <div class="field span-12"><button class="btn primary" type="submit" style="width:100%">Sign in</button></div>
+</form>
+<p class="small muted mt-2 mb-0" style="text-align:center"><a href="{% url 'accounts:password_reset' %}">Forgot password?</a></p>
+{% endblock %}

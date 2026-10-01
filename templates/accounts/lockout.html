@@ -1,0 +1,7 @@
+{% extends "accounts/_auth_base.html" %}
+{% block title %}Account locked{% endblock %}
+{% block auth %}
+<h1 style="font-size:18px;margin-bottom:8px">Too many sign-in attempts</h1>
+<p>This account is temporarily locked after repeated failed sign-ins. Try again later, or ask the portal owner to clear the lock.</p>
+<a class="btn" href="{% url 'accounts:login' %}">Back to sign in</a>
+{% endblock %}

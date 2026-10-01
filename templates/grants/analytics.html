@@ -1,0 +1,148 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}Analytics{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="titles"><h1>Analytics</h1><div class="subtitle">Trends across submitted applications. Years follow the submission date (or deadline if not recorded).</div></div>
+</div>
+
+<form class="filters" method="get" x-data>
+  <select name="span" class="input-sm" @change="$el.form.submit()" aria-label="Time range">
+    <option value="3" {% if span == '3' %}selected{% endif %}>Last 3 years</option>
+    <option value="5" {% if span == '5' %}selected{% endif %}>Last 5 years</option>
+    <option value="10" {% if span == '10' %}selected{% endif %}>Last 10 years</option>
+    <option value="all" {% if span == 'all' %}selected{% endif %}>All time</option>
+  </select>
+  <select name="basis" class="input-sm" @change="$el.form.submit()" aria-label="Year basis">
+    <option value="cy" {% if basis == 'cy' %}selected{% endif %}>Calendar years</option>
+    <option value="fy" {% if basis == 'fy' %}selected{% endif %}>Fiscal years (start month {{ fy_month }})</option>
+  </select>
+  <select name="funder" class="input-sm" @change="$el.form.submit()" aria-label="Funder">
+    <option value="">All funders</option>
+    {% for f in funders %}<option value="{{ f.pk }}" {% if request.GET.funder == f.pk|stringformat:'s' %}selected{% endif %}>{{ f.display_name }}</option>{% endfor %}
+  </select>
+  <select name="role" class="input-sm" @change="$el.form.submit()" aria-label="Role">
+    <option value="">Any role</option>
+    <option value="lead" {% if request.GET.role == 'lead' %}selected{% endif %}>PI / MPI only</option>
+  </select>
+</form>
+
+{% if not has_data %}
+<div class="card"><div class="empty">{% icon 'chart-column' 32 %}<h3>No submitted applications yet</h3><p>Charts fill in as applications are submitted and decided. <a href="{% url 'grants:import' %}">Import past submissions</a> to see your history right away.</p></div></div>
+{% else %}
+<div class="stats">
+  <div class="stat"><div class="stat-label">Submitted</div><div class="stat-value">{{ tiles.submitted }}</div><div class="stat-sub">{{ tiles.pending }} still pending</div></div>
+  <div class="stat"><div class="stat-label">Success rate</div><div class="stat-value">{% if tiles.rate is not None %}{{ tiles.rate }}%{% else %}—{% endif %}</div><div class="stat-sub">{{ tiles.awarded }} awarded of {{ tiles.decided }} decided</div></div>
+  <div class="stat"><div class="stat-label">Total awarded</div><div class="stat-value">{{ tiles.total_awarded|money_short }}</div><div class="stat-sub">Total costs</div></div>
+  <div class="stat"><div class="stat-label">Median time to decision</div><div class="stat-value">{% if tiles.median_time is not None %}{{ tiles.median_time|floatformat:1 }} mo{% else %}—{% endif %}</div><div class="stat-sub">Submission to award / decline</div></div>
+  <div class="stat"><div class="stat-label">Median percentile</div><div class="stat-value">{% if tiles.median_percentile is not None %}{{ tiles.median_percentile|floatformat:0 }}{% else %}—{% endif %}</div><div class="stat-sub">Scored applications</div></div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Submissions and outcomes</h2></div>
+    <div class="card-body">
+      <div class="chart-box"><canvas data-chart="c-outcomes" role="img" aria-label="Submissions per year by outcome"></canvas></div>
+      <script type="application/json" id="c-outcomes">{{ charts.outcomes|safe }}</script>
+      <details class="table-view"><summary>Show as table</summary><div class="table-wrap"><table class="table compact">
+        <thead><tr><th></th>{% for l in labels %}<th class="num">{{ l }}</th>{% endfor %}</tr></thead>
+        <tbody>{% for s in outcomes %}<tr><td>{{ s.name }}</td>{% for v in s.data %}<td class="num">{{ v }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div></details>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Funding awarded</h2><span class="muted small">total costs, by year of award</span></div>
+    <div class="card-body">
+      {% if has_awarded_money %}
+      <div class="chart-box"><canvas data-chart="c-awarded" role="img" aria-label="Funding awarded per year"></canvas></div>
+      <script type="application/json" id="c-awarded">{{ charts.awarded|safe }}</script>
+      <details class="table-view"><summary>Show as table</summary><table class="table compact"><tbody>{% for l, v in awarded_money %}<tr><td>{{ l }}</td><td class="num">{{ v|money }}</td></tr>{% endfor %}</tbody></table></details>
+      {% else %}<div class="empty"><p>No awards made in this range.</p></div>{% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Success rate by funder</h2><span class="muted small">decided applications</span></div>
+    <div class="card-body">
+      {% if funder_rows %}
+      <div class="chart-box short"><canvas data-chart="c-funders" role="img" aria-label="Success rate by funder"></canvas></div>
+      <script type="application/json" id="c-funders">{{ charts.funders|safe }}</script>
+      <details class="table-view"><summary>Show as table</summary><table class="table compact"><thead><tr><th>Funder</th><th class="num">Awarded</th><th class="num">Decided</th><th class="num">Rate</th></tr></thead>
+        <tbody>{% for r in funder_rows %}<tr><td>{{ r.0 }}</td><td class="num">{{ r.1 }}</td><td class="num">{{ r.2 }}</td><td class="num">{{ r.3 }}%</td></tr>{% endfor %}</tbody></table></details>
+      {% else %}<div class="empty"><p>No decisions in this range yet.</p></div>{% endif %}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Success rate by mechanism</h2></div>
+    <div class="card-body">
+      {% if mech_rows %}
+      <div class="chart-box short"><canvas data-chart="c-mechanisms" role="img" aria-label="Success rate by mechanism"></canvas></div>
+      <script type="application/json" id="c-mechanisms">{{ charts.mechanisms|safe }}</script>
+      <details class="table-view"><summary>Show as table</summary><table class="table compact"><thead><tr><th>Mechanism</th><th class="num">Awarded</th><th class="num">Decided</th><th class="num">Rate</th></tr></thead>
+        <tbody>{% for r in mech_rows %}<tr><td>{{ r.0 }}</td><td class="num">{{ r.1 }}</td><td class="num">{{ r.2 }}</td><td class="num">{{ r.3 }}%</td></tr>{% endfor %}</tbody></table></details>
+      {% else %}<div class="empty"><p>No decisions in this range yet.</p></div>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card mt-2">
+  <div class="card-head"><h2>Funding runway</h2><span class="muted small">active awards by year, plus pending if every one were funded</span>
+    <form method="get" class="actions" x-data>
+      {% for k, v in request.GET.items %}{% if k != 'measure' %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endif %}{% endfor %}
+      <select name="measure" class="input-sm" @change="$el.form.submit()" aria-label="Measure">
+        <option value="total" {% if request.GET.measure != 'direct' %}selected{% endif %}>Total costs</option>
+        <option value="direct" {% if request.GET.measure == 'direct' %}selected{% endif %}>Direct costs</option>
+      </select>
+    </form>
+  </div>
+  <div class="card-body">
+    {% if runway.series %}
+    <div class="chart-box tall"><canvas data-chart="c-runway" role="img" aria-label="Funding runway"></canvas></div>
+    <script type="application/json" id="c-runway">{{ charts.runway|safe }}</script>
+    {% include "grants/_chart_table.html" with labels=runway.labels rows=runway.table fmt="money" %}
+    {% else %}<div class="empty"><p>No active awards.</p></div>{% endif %}
+  </div>
+</div>
+
+<div class="grid grid-2 mt-2">
+  <div class="card">
+    <div class="card-head"><h2>Scores and outcomes</h2><span class="muted small">all time · better scores toward the top right</span></div>
+    <div class="card-body">
+      {% if has_scores %}
+      <div class="chart-box"><canvas data-chart="c-scores" role="img" aria-label="Impact score versus percentile"></canvas></div>
+      <script type="application/json" id="c-scores">{{ charts.scores|safe }}</script>
+      <details class="table-view"><summary>Show as table</summary><table class="table compact"><thead><tr><th>Application</th><th>Outcome</th><th class="num">Percentile</th><th class="num">Score</th></tr></thead><tbody>
+        {% for p in score_points.awarded %}<tr><td>{{ p.label }}</td><td>Awarded</td><td class="num">{{ p.x }}</td><td class="num">{{ p.y }}</td></tr>{% endfor %}
+        {% for p in score_points.not_funded %}<tr><td>{{ p.label }}</td><td>Not funded</td><td class="num">{{ p.x }}</td><td class="num">{{ p.y }}</td></tr>{% endfor %}
+      </tbody></table></details>
+      {% else %}<div class="empty"><p>Record impact scores and percentiles on decided applications to see where your funding line falls.</p></div>{% endif %}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Time to decision</h2></div>
+    <div class="card-body">
+      <div class="chart-box short"><canvas data-chart="c-times" role="img" aria-label="Time from submission to decision"></canvas></div>
+      <script type="application/json" id="c-times">{{ charts.times|safe }}</script>
+      <details class="table-view"><summary>Show as table</summary><table class="table compact"><tbody>{% for l, v in time_bins %}<tr><td>{{ l }}</td><td class="num">{{ v }}</td></tr>{% endfor %}</tbody></table></details>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Submission workload by month</h2></div>
+    <div class="card-body">
+      <div class="chart-box short"><canvas data-chart="c-months" role="img" aria-label="Submissions by month of year"></canvas></div>
+      <script type="application/json" id="c-months">{{ charts.months|safe }}</script>
+      <p class="chart-note">Plan writing time around your busiest months.</p>
+      <details class="table-view"><summary>Show as table</summary><table class="table compact"><tbody>{% for l, v in by_month %}<tr><td>{{ l }}</td><td class="num">{{ v }}</td></tr>{% endfor %}</tbody></table></details>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Recurring critique themes</h2><span class="muted small">all time</span></div>
+    <div class="card-body">
+      {% if themes %}
+      <div class="chart-box short"><canvas data-chart="c-themes" role="img" aria-label="Critique themes"></canvas></div>
+      <script type="application/json" id="c-themes">{{ charts.themes|safe }}</script>
+      <details class="table-view"><summary>Show as table</summary><table class="table compact"><tbody>{% for t in themes %}<tr><td>{{ t.name }}</td><td class="num">{{ t.n }}</td></tr>{% endfor %}</tbody></table></details>
+      {% else %}<div class="empty"><p>Tag reviewer feedback with critique themes (e.g. Preliminary data, Feasibility) to see what reviewers raise most.</p></div>{% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

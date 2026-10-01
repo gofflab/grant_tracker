@@ -1,0 +1,83 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}Opportunities{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="titles"><h1>Opportunities</h1><div class="subtitle">RFAs, NOFOs, program announcements and foundation calls you're tracking.</div></div>
+  <div class="actions">
+    <div class="btn-group">
+      <a class="btn sm {% if layout == 'cards' %}active{% endif %}" href="{% querystring layout='cards' %}" aria-label="Cards">{% icon 'layers' 14 %}</a>
+      <a class="btn sm {% if layout == 'table' %}active{% endif %}" href="{% querystring layout='table' %}" aria-label="Table">{% icon 'rows-3' 14 %}</a>
+    </div>
+    {% if user.can_edit %}<a class="btn primary" href="{% url 'grants:opportunity_create' %}">{% icon 'plus' %} New opportunity</a>{% endif %}
+  </div>
+</div>
+<form class="filters" method="get" x-data>
+  <input type="hidden" name="layout" value="{{ layout }}">
+  <input type="search" name="q" class="input-sm" placeholder="Search title, number, funder…" value="{{ request.GET.q }}" aria-label="Search">
+  <select name="status" class="input-sm" @change="$el.form.submit()" aria-label="Status">
+    <option value="active" {% if status == 'active' %}selected{% endif %}>Active (watching, planning, applying)</option>
+    <option value="all" {% if status == 'all' %}selected{% endif %}>All</option>
+    {% for v, l in statuses %}<option value="{{ v }}" {% if status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+  </select>
+  <select name="funder" class="input-sm" @change="$el.form.submit()" aria-label="Funder">
+    <option value="">All funders</option>
+    {% for f in funders %}<option value="{{ f.pk }}" {% if request.GET.funder == f.pk|stringformat:'s' %}selected{% endif %}>{{ f.display_name }}</option>{% endfor %}
+  </select>
+  <select name="window" class="input-sm" @change="$el.form.submit()" aria-label="Deadline window">
+    <option value="">Any deadline</option>
+    <option value="30" {% if request.GET.window == '30' %}selected{% endif %}>Due in 30 days</option>
+    <option value="90" {% if request.GET.window == '90' %}selected{% endif %}>Due in 90 days</option>
+    <option value="180" {% if request.GET.window == '180' %}selected{% endif %}>Due in 6 months</option>
+  </select>
+  <select name="sort" class="input-sm" @change="$el.form.submit()" aria-label="Sort">
+    <option value="deadline" {% if sort == 'deadline' %}selected{% endif %}>Sort: deadline</option>
+    <option value="fit" {% if sort == 'fit' %}selected{% endif %}>Sort: best fit</option>
+    <option value="added" {% if sort == 'added' %}selected{% endif %}>Sort: recently added</option>
+  </select>
+  <label class="row small"><input type="checkbox" name="limited" value="1" {% if request.GET.limited %}checked{% endif %} @change="$el.form.submit()"> Limited submission</label>
+</form>
+
+{% if page.object_list %}
+  {% if layout == 'table' %}
+  <div class="card"><div class="table-wrap"><table class="table">
+    <thead><tr><th>Opportunity</th><th>Status</th><th>Funder</th><th>Mechanism</th><th>Next deadline</th><th class="num">Ceiling</th><th>Fit</th><th class="num">Apps</th></tr></thead>
+    <tbody>{% for o in page %}
+      <tr>
+        <td class="title-cell"><a href="{{ o.get_absolute_url }}">{{ o.title }}</a><small>{{ o.number }}{% if o.limited_submission %} · Limited submission{% endif %}</small></td>
+        <td>{% status_badge o.status o.get_status_display 'o' %}</td>
+        <td>{{ o.funder.display_name|default:"—" }}{% if o.sponsor_unit %}<br><small class="muted">{{ o.sponsor_unit }}</small>{% endif %}</td>
+        <td>{{ o.mechanism|default:"—" }}</td>
+        <td class="nowrap">{% with nd=o.next_deadline %}{% if nd %}<span class="due {{ nd.1|due_class }}">{{ nd.0 }} {{ nd.1|date:"M j, Y" }}</span>{% elif o.recurring %}<span class="muted">{{ o.recurrence_notes|default:"Recurring" }}</span>{% else %}—{% endif %}{% endwith %}</td>
+        <td class="num">{{ o.max_award|money_short }}</td>
+        <td>{% if o.fit_score %}{{ o.fit_score }}/5{% else %}—{% endif %}</td>
+        <td class="num">{{ o.app_count }}</td>
+      </tr>{% endfor %}
+    </tbody></table></div></div>
+  {% else %}
+  <div class="grid grid-3">
+    {% for o in page %}
+    <a class="card" href="{{ o.get_absolute_url }}" style="color:inherit;text-decoration:none;display:flex;flex-direction:column">
+      <div class="card-body" style="flex:1">
+        <div class="row" style="justify-content:space-between;align-items:flex-start">
+          <span class="muted small">{{ o.funder.display_name|default:"No funder" }}{% if o.sponsor_unit %} · {{ o.sponsor_unit }}{% endif %}{% if o.mechanism %} · {{ o.mechanism }}{% endif %}</span>
+          {% status_badge o.status o.get_status_display 'o' %}
+        </div>
+        <h3 style="margin:8px 0 6px;font-size:15px">{{ o.title }}</h3>
+        {% if o.summary %}<p class="small ink-2 mb-1">{{ o.summary|truncatechars:160 }}</p>{% endif %}
+        <div class="chips">{% if o.limited_submission %}<span class="chip chip-amber">Limited submission</span>{% endif %}{% for t in o.tags.all %}{% tag_chip t %}{% endfor %}</div>
+      </div>
+      <div class="card-foot row">
+        {% with nd=o.next_deadline %}{% if nd %}<span class="due {{ nd.1|due_class }}">{% icon 'clock' 13 %} {{ nd.0 }} {{ nd.1|date:"M j" }} · {{ nd.1|days_until }}</span>{% elif o.recurring %}<span>{% icon 'repeat' 13 %} {{ o.recurrence_notes|default:"Recurring" }}</span>{% else %}<span>No deadline set</span>{% endif %}{% endwith %}
+        <span class="spacer"></span>
+        {% if o.max_award %}<span>{{ o.max_award|money_short }}</span>{% endif %}
+        {% if o.fit_score %}<span title="Fit">{% for i in "12345"|make_list %}{% if forloop.counter <= o.fit_score %}●{% else %}○{% endif %}{% endfor %}</span>{% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if page.paginator.num_pages > 1 %}<div class="row mt-2"><span class="spacer"></span>{% if page.has_previous %}<a class="btn sm" href="{% querystring page=page.previous_page_number %}">Prev</a>{% endif %}<span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a class="btn sm" href="{% querystring page=page.next_page_number %}">Next</a>{% endif %}</div>{% endif %}
+{% else %}
+<div class="card"><div class="empty">{% icon 'target' 32 %}<h3>No opportunities here</h3><p>Track RFAs and foundation calls before you commit to applying.{% if user.can_edit %} <a href="{% url 'grants:opportunity_create' %}">Add one</a>.{% endif %}</p></div></div>
+{% endif %}
+{% endblock %}
