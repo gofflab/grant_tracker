@@ -1,8 +1,12 @@
 {% extends "base.html" %}{% load gt %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
-<div class="page-head"><div class="titles"><div class="crumbs"><a href="{% url 'grants:opportunity_list' %}">Opportunities</a></div><h1>{{ title }}</h1></div></div>
-<form method="post" class="card" style="max-width:1000px">{% csrf_token %}
+<div class="page-head"><div class="titles"><div class="crumbs"><a href="{% url 'grants:opportunity_list' %}">Opportunities</a></div><h1>{{ title }}</h1></div>
+  {% if not opp and not extraction %}<div class="actions"><a class="btn" href="{% url 'grants:opportunity_import' %}">{% icon 'sparkles' %} Import from an RFA instead</a></div>{% endif %}
+</div>
+{% if extraction %}{% include "grants/opportunities/_extraction.html" %}{% endif %}
+<form method="post" id="opportunity-form" class="card" style="max-width:1000px" {% if autofilled %}data-autofilled="{{ autofilled|join:',' }}"{% endif %}>{% csrf_token %}
+  {% if extraction %}<input type="hidden" name="imported" value="1">{% endif %}
   <div class="card-body"><div class="form-grid">
     {% include "_form_errors.html" %}
     <div class="fieldset-title">Announcement</div>

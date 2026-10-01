@@ -23,6 +23,7 @@ urlpatterns = [
     # Opportunities
     path("opportunities/", opportunities.opportunity_list, name="opportunity_list"),
     path("opportunities/new/", opportunities.opportunity_create, name="opportunity_create"),
+    path("opportunities/import/", opportunities.opportunity_import, name="opportunity_import"),
     path("opportunities/<int:pk>/", opportunities.opportunity_detail, name="opportunity_detail"),
     path("opportunities/<int:pk>/edit/", opportunities.opportunity_edit, name="opportunity_edit"),
     path("opportunities/<int:pk>/status/", opportunities.opportunity_status, name="opportunity_status"),

@@ -397,6 +397,12 @@ a.stat { color: inherit; display: block; }
 .field.check { flex-direction: row; align-items: flex-start; gap: 8px; }
 .field.check input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--accent); }
 .field.check .help { display: block; }
+.inline-check { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+.inline-check input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+.field.autofilled input:not([type=checkbox]), .field.autofilled select, .field.autofilled textarea {
+  background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface)); border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong));
+}
+.field.autofilled > label::after { content: "auto-filled"; margin-left: 6px; font-size: 10.5px; font-weight: 600; color: var(--accent-ink); text-transform: uppercase; letter-spacing: 0.04em; }
 .fieldset { border: 0; padding: 0; margin: 0 0 8px; }
 .fieldset-title { grid-column: span 12; font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); padding-top: 10px; border-top: 1px solid var(--border); margin-top: 6px; }
 .fieldset-title:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
@@ -503,6 +509,7 @@ a.stat { color: inherit; display: block; }
 .alert.bad { background: var(--bad-soft); border-color: transparent; }
 .alert.good { background: var(--good-soft); border-color: transparent; }
 .alert.info { background: var(--accent-soft); border-color: transparent; }
+.form-grid > .alert { grid-column: 1 / -1; margin-bottom: 0; }
 .toasts { position: fixed; right: 18px; bottom: 18px; z-index: 100; display: flex; flex-direction: column; gap: 8px; max-width: 380px; }
 .toast {
   display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; border-radius: 10px; background: var(--ink); color: var(--surface);

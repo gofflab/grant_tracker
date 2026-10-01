@@ -97,6 +97,7 @@
           <div class="menu" x-show="open" x-cloak>
             <a href="{% url 'grants:application_create' %}">{% icon 'file-text' %} Application</a>
             <a href="{% url 'grants:opportunity_create' %}">{% icon 'target' %} Opportunity</a>
+            <a href="{% url 'grants:opportunity_import' %}">{% icon 'sparkles' %} Opportunity from an RFA</a>
             <a href="#" hx-get="{% url 'grants:task_create' %}" hx-target="#modal" @click="open = false">{% icon 'list-todo' %} Task</a>
             <a href="#" hx-get="{% url 'grants:document_create' %}" hx-target="#modal" @click="open = false">{% icon 'upload' %} Library document</a>
             <div class="sep"></div>

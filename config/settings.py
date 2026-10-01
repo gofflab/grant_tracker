@@ -207,6 +207,10 @@ EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "Grant Tracker <grant-tracker@localhost>")
 
+# Optional AI extraction when importing opportunities from an RFA (Anthropic API).
+ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY", "")
+OPPORTUNITY_AI_MODEL = env("OPPORTUNITY_AI_MODEL", "claude-opus-5-5")
+
 # Optional Slack incoming-webhook for the reminder digest.
 SLACK_WEBHOOK_URL = env("SLACK_WEBHOOK_URL", "")
 

@@ -3,12 +3,15 @@ from datetime import timedelta
 from django.contrib import messages
 from django.db.models import Count, F, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from accounts.permissions import editor_required, owner_required
 
-from ..forms import OpportunityForm
+from .. import extraction
+from ..extraction import ai as extraction_ai
+from ..forms import OpportunityForm, OpportunityImportForm
 from ..models import Funder, Opportunity, Tag
 from .common import done, paginate, render_form
 
@@ -65,18 +68,59 @@ def opportunity_detail(request, pk):
     })
 
 
+IMPORT_SESSION_KEY = "opportunity_import"
+
+
+@editor_required
+def opportunity_import(request):
+    """Read an RFA (link, number, file or pasted text) and open a pre-filled opportunity form."""
+    bound = request.method == "POST"
+    form = OpportunityImportForm(request.POST if bound else None, request.FILES if bound else None)
+    if bound and form.is_valid():
+        data = form.cleaned_data
+        upload = data.get("upload")
+        result = extraction.run(
+            source=data.get("source", ""),
+            upload=(upload.name, upload.read()) if upload else None,
+            pasted=data.get("pasted", ""),
+            use_ai=data.get("use_ai") and extraction_ai.available(),
+        )
+        if not result.rows:
+            for note in result.notes:
+                form.add_error(None, note)
+        else:
+            request.session[IMPORT_SESSION_KEY] = result.as_session()
+            return redirect(f"{reverse('grants:opportunity_create')}?imported=1")
+    return render(request, "grants/opportunities/import.html", {
+        "form": form, "ai_available": extraction_ai.available(),
+    })
+
+
 @editor_required
 def opportunity_create(request):
-    form = OpportunityForm(request.POST or None)
+    imported = request.session.get(IMPORT_SESSION_KEY) if (request.GET.get("imported") or request.POST.get("imported")) else None
+    initial = imported["initial"] if imported else {}
+    form = OpportunityForm(request.POST or None, initial=initial)
     if request.method == "POST" and form.is_valid():
         opp = form.save(commit=False)
         opp.added_by = request.user
+        suggested = (imported or {}).get("new_funder")
+        if suggested and not opp.funder_id and request.POST.get("create_funder"):
+            opp.funder = (Funder.objects.filter(name__iexact=suggested["name"]).first()
+                          or Funder.objects.create(**suggested))
         opp.save()
         form.save_m2m()
         form.save_tags(opp)
-        messages.success(request, "Opportunity added.")
+        request.session.pop(IMPORT_SESSION_KEY, None)
+        messages.success(request, "Opportunity added from the announcement." if imported else "Opportunity added.")
         return redirect(opp)
-    return render(request, "grants/opportunities/form.html", {"form": form, "title": "New opportunity"})
+    ctx = {"form": form, "title": "New opportunity", "extraction": imported}
+    if imported:
+        ctx["title"] = "Review imported opportunity"
+        ctx["autofilled"] = [row["field"] for row in imported["rows"]]
+        if imported.get("duplicate_id"):
+            ctx["duplicate"] = Opportunity.objects.filter(pk=imported["duplicate_id"]).first()
+    return render(request, "grants/opportunities/form.html", ctx)
 
 
 @editor_required

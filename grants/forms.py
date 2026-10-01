@@ -401,3 +401,32 @@ class ApplyChecklistForm(forms.Form):
 class ImportForm(forms.Form):
     csv_file = forms.FileField(label="CSV file", help_text="UTF-8 CSV with a header row. Download the template for column names.")
     dry_run = forms.BooleanField(required=False, initial=True, label="Preview only (don't save)")
+
+
+class OpportunityImportForm(forms.Form):
+    source = forms.CharField(
+        required=False, max_length=1000, label="Link or announcement number",
+        widget=forms.TextInput(attrs={"placeholder": "https://grants.nih.gov/grants/guide/pa-files/PAR-25-131.html  or  PAR-25-131", "autofocus": True}),
+    )
+    upload = forms.FileField(required=False, label="Or upload the announcement",
+                             help_text="PDF, Word, HTML or text file, up to 25 MB")
+    pasted = forms.CharField(required=False, label="Or paste its text",
+                             widget=forms.Textarea(attrs={"rows": 6, "placeholder": "Paste the announcement or the page text here"}))
+    use_ai = forms.BooleanField(required=False, initial=True, label="Use AI to read it (Claude)")
+
+    IMPORT_EXTENSIONS = (".pdf", ".docx", ".html", ".htm", ".txt", ".md")
+
+    def clean_upload(self):
+        f = self.cleaned_data.get("upload")
+        if f:
+            if not f.name.lower().endswith(self.IMPORT_EXTENSIONS):
+                raise forms.ValidationError("Upload a PDF, Word, HTML or text file.")
+            if f.size > 25 * 1024 * 1024:
+                raise forms.ValidationError("That file is larger than 25 MB.")
+        return f
+
+    def clean(self):
+        data = super().clean()
+        if not (data.get("source", "").strip() or data.get("upload") or data.get("pasted", "").strip()):
+            raise forms.ValidationError("Paste a link or announcement number, upload the announcement, or paste its text.")
+        return data

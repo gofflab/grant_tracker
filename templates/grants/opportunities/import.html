@@ -1,0 +1,47 @@
+{% extends "base.html" %}{% load gt %}
+{% block title %}Import opportunity{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="titles">
+    <div class="crumbs"><a href="{% url 'grants:opportunity_list' %}">Opportunities</a></div>
+    <h1>Import an opportunity</h1>
+    <div class="subtitle">Point Grant Tracker at an RFA or funding call. It fills in as much of the opportunity as it can, and you review everything before saving.</div>
+  </div>
+</div>
+<div class="grid grid-main">
+  <form method="post" enctype="multipart/form-data" class="card" x-data="{ busy: false }" @submit="busy = true">{% csrf_token %}
+    <div class="card-body"><div class="form-grid">
+      {% include "_form_errors.html" %}
+      {% include "_field.html" with field=form.source span="span-12" %}
+      {% include "_field.html" with field=form.upload span="span-12" %}
+      {% include "_field.html" with field=form.pasted span="span-12" %}
+      {% if ai_available %}
+        {% include "_field.html" with field=form.use_ai span="span-12" %}
+      {% endif %}
+    </div></div>
+    <div class="form-actions" style="padding:14px 16px;margin:0">
+      <a class="btn ghost" href="{% url 'grants:opportunity_list' %}">Cancel</a>
+      <button class="btn primary" type="submit" :disabled="busy">
+        <span x-show="!busy">{% icon 'sparkles' %} Read announcement</span>
+        <span x-show="busy" x-cloak>{% icon 'hourglass' %} Reading{% if ai_available %} (up to a minute){% endif %}…</span>
+      </button>
+    </div>
+  </form>
+  <div class="card">
+    <div class="card-head"><h2>How it works</h2></div>
+    <div class="card-body small prose">
+      <ol style="padding-left:18px">
+        <li><strong>Federal numbers</strong> (e.g. PAR-25-131, RFA-NS-26-001) are looked up on Grants.gov for exact dates, ceilings and agency, and the full NIH Guide notice is read.</li>
+        <li><strong>The announcement text</strong> is scanned for labeled fields: due dates, letters of intent, expiration, budget limits, project period, activity code, institutes, eligibility, limited-submission rules and contacts.</li>
+        {% if ai_available %}
+        <li><strong>AI (Claude)</strong> reads the whole announcement too, which helps most with foundation calls and free-form pages. Only the announcement is sent.</li>
+        {% else %}
+        <li class="muted"><strong>AI reading is off.</strong> Add an <code>ANTHROPIC_API_KEY</code> to <code>.env</code> to have Claude read free-form foundation pages as well.</li>
+        {% endif %}
+        <li><strong>You review</strong> a pre-filled form showing where each value came from, then save.</li>
+      </ol>
+      <p class="mb-0 muted">Some sites block automated reading. If a link fails, download the PDF and upload it, or copy the page text into the box.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
