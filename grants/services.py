@@ -9,7 +9,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from .models import (
@@ -23,6 +23,7 @@ from .models import (
     DocumentBlob,
     Funder,
     Opportunity,
+    Person,
     Personnel,
     StatusChange,
     Task,
@@ -122,6 +123,57 @@ def create_award(application, user=None):
         generate_budget_periods(award)
         generate_reporting_tasks(award, user)
     return award
+
+
+def award_generated_tasks(award):
+    """Tasks the award created: its reporting schedule and the award-setup checklist."""
+    app = award.application
+    setup_titles = ChecklistItem.objects.filter(
+        template__applies_to=ChecklistTemplate.AppliesTo.AWARD
+    ).values_list("title", flat=True)
+    return app.tasks.filter(
+        models.Q(auto_key__startswith=f"award:{award.pk}:")
+        | models.Q(title__in=list(setup_titles), created_at__gte=award.created_at - timedelta(minutes=1))
+    )
+
+
+def status_before_award(application):
+    """The status the application had before it was last marked Awarded."""
+    change = application.status_changes.filter(to_status=Application.Status.AWARDED).order_by("-changed_at").first()
+    if change and change.from_status and change.from_status != Application.Status.AWARDED:
+        return change.from_status
+    return Application.Status.PENDING_AWARD
+
+
+@transaction.atomic
+def delete_award(award, user=None, move_to=None, delete_tasks=True, reason=""):
+    """Delete an award record (budget years go with it) and optionally its generated tasks.
+
+    The application moves to `move_to` unless that is Awarded, in which case it stays Awarded with
+    no award record so a fresh one can be created. Returns a summary dict for the confirmation message.
+    """
+    app = award.application
+    label = award.award_number or "award record"
+    summary = {"periods": award.periods.count(), "tasks": 0, "status": None}
+    if delete_tasks:
+        summary["tasks"] = award_generated_tasks(award).delete()[1].get("grants.Task", 0)
+    award.delete()
+    note = f"Award record deleted{': ' + reason if reason else ''}"
+    log_activity(app, user, Activity.Kind.AWARD, f"Deleted {label}" + (f" ({reason})" if reason else ""))
+    if move_to and move_to != app.status:
+        change_status(app, move_to, user, note)
+        app.refresh_from_db()
+        fields = []
+        if move_to not in Application.DECIDED and app.decision_on:
+            app.decision_on = None
+            fields.append("decision_on")
+        if move_to in Application.PRE_SUBMISSION and app.submitted_on:
+            app.submitted_on = None
+            fields.append("submitted_on")
+        if fields:
+            app.save(update_fields=fields + ["updated_at"])
+        summary["status"] = app.get_status_display()
+    return summary
 
 
 # ---------------------------------------------------------------------------
@@ -312,6 +364,63 @@ def generate_reporting_tasks(award, user=None):
 
 
 # ---------------------------------------------------------------------------
+# Lab PI
+# ---------------------------------------------------------------------------
+
+# "My role" on an application -> the Lab PI's personnel role on that application.
+LAB_PI_ROLES = {
+    Application.Role.PI: Personnel.Role.PI,
+    Application.Role.MPI: Personnel.Role.MPI,
+    Application.Role.CO_PI: Personnel.Role.CO_PI,
+    Application.Role.CO_I: Personnel.Role.CO_I,
+    Application.Role.KEY: Personnel.Role.KEY,
+    Application.Role.MENTOR: Personnel.Role.KEY,
+    Application.Role.CONSULTANT: Personnel.Role.CONSULTANT,
+}
+
+
+def add_lab_pi(application):
+    """Put the Lab PI on the application's team (no effort yet). Returns the new line, or None."""
+    lab_pi = Person.lab_pi()
+    if lab_pi is None or application.personnel.filter(person=lab_pi).exists():
+        return None
+    return Personnel.objects.create(
+        application=application, person=lab_pi, is_key=True,
+        role=LAB_PI_ROLES.get(application.role, Personnel.Role.KEY),
+    )
+
+
+def sync_lab_pi_role(application, old_role):
+    """When "My role" changes, update the Lab PI's line if it still carries the role implied by the old value."""
+    lab_pi = Person.lab_pi()
+    if lab_pi is None:
+        return 0
+    return application.personnel.filter(person=lab_pi, role=LAB_PI_ROLES.get(old_role)).update(
+        role=LAB_PI_ROLES.get(application.role, Personnel.Role.KEY)
+    )
+
+
+@transaction.atomic
+def claim_lab_pi(user):
+    """Make (or create) the user's own person record the Lab PI. Returns (person, error)."""
+    current = Person.lab_pi()
+    mine = getattr(user, "person", None)
+    if current and current != mine:
+        return None, f"{current} is already the Lab PI. Change their type in Settings → People first."
+    if not user.is_owner:
+        return None, "Only an Owner account can be the Lab PI."
+    if mine is None:
+        mine = Person.objects.create(
+            first_name=user.first_name or user.username, last_name=user.last_name, email=user.email,
+            kind=Person.Kind.LAB_PI, user=user,
+        )
+    elif not mine.is_lab_pi:
+        mine.kind = Person.Kind.LAB_PI
+        mine.save(update_fields=["kind", "updated_at"])
+    return mine, None
+
+
+# ---------------------------------------------------------------------------
 # Resubmissions and renewals
 # ---------------------------------------------------------------------------
 
@@ -338,6 +447,7 @@ def clone_application(source, submission_type, user=None):
         Personnel(application=new, person=p.person, role=p.role, person_months=p.person_months, is_key=p.is_key)
         for p in source.personnel.all()
     )
+    add_lab_pi(new)
     if submission_type == Application.SubmissionType.RESUBMISSION:
         Task.objects.create(
             application=new, title="Write Introduction to the resubmission", category=Task.Category.WRITING,

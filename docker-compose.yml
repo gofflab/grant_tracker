@@ -4,7 +4,10 @@
 name: grant-tracker
 
 x-app: &app
+  # Built locally from this folder (never pulled from a registry); web and scheduler share the image.
+  build: .
   image: grant-tracker:latest
+  pull_policy: never
   env_file: .env
   environment:
     POSTGRES_HOST: db
@@ -34,7 +37,6 @@ services:
 
   web:
     <<: *app
-    build: .
     networks: [backend, frontend]
 
   scheduler:

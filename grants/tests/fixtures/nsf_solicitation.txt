@@ -1,0 +1,57 @@
+Synthetic test fixture modeled on the NSF program solicitation layout. Not a real solicitation.
+
+Mechanisms of Neural Development in Diverse Organisms (MNDDO)
+
+PROGRAM SOLICITATION
+NSF 26-512
+
+National Science Foundation
+
+Directorate for Biological Sciences (BIO)
+     Division of Integrative Organismal Systems (IOS)
+
+Full Proposal Deadline(s) (due by 5 p.m. submitter's local time):
+
+     January 12, 2027
+
+     Second Tuesday in January, Annually Thereafter
+
+Important Information And Revision Notes
+
+This solicitation replaces NSF 24-501.
+
+SUMMARY OF PROGRAM REQUIREMENTS
+
+General Information
+
+Program Title:
+
+Mechanisms of Neural Development in Diverse Organisms (MNDDO)
+
+Synopsis of Program:
+
+The MNDDO program supports research on the cellular and molecular mechanisms that build nervous systems across the diversity of animal life, including invertebrate and non-traditional model organisms.
+
+Cognizant Program Officer(s):
+
+Avery Smith, Program Director, BIO/IOS, telephone: (703) 555-0100, email: asmith@nsf.gov
+
+Award Information
+
+Anticipated Type of Award: Standard Grant or Continuing Grant
+
+Estimated Number of Awards: 15 to 20
+
+Anticipated Funding Amount: $12,000,000
+
+Awards may be up to 3 years in duration.
+
+Eligibility Information
+
+Who May Submit Proposals:
+
+Proposals may only be submitted by accredited Institutions of Higher Education located in the US.
+
+Limit on Number of Proposals per Organization: 2
+
+No more than two proposals may be submitted per organization.

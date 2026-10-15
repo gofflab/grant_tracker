@@ -8,7 +8,8 @@
       <a class="btn sm {% if layout == 'cards' %}active{% endif %}" href="{% querystring layout='cards' %}" aria-label="Cards">{% icon 'layers' 14 %}</a>
       <a class="btn sm {% if layout == 'table' %}active{% endif %}" href="{% querystring layout='table' %}" aria-label="Table">{% icon 'rows-3' 14 %}</a>
     </div>
-    {% if user.can_edit %}<a class="btn primary" href="{% url 'grants:opportunity_create' %}">{% icon 'plus' %} New opportunity</a>{% endif %}
+    {% if user.can_edit %}<a class="btn" href="{% url 'grants:opportunity_import' %}">{% icon 'sparkles' %} Import from RFA</a>
+    <a class="btn primary" href="{% url 'grants:opportunity_create' %}">{% icon 'plus' %} New opportunity</a>{% endif %}
   </div>
 </div>
 <form class="filters" method="get" x-data>

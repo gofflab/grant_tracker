@@ -155,7 +155,19 @@
   document.addEventListener("htmx:load", function (evt) {
     initBoards(evt.detail.elt);
     renderCharts(evt.detail.elt);
+    markAutofilled(evt.detail.elt);
   });
+
+  // Highlight form fields that were filled in from an imported announcement.
+  function markAutofilled(root) {
+    (root || document).querySelectorAll("form[data-autofilled]").forEach(function (form) {
+      form.getAttribute("data-autofilled").split(",").forEach(function (name) {
+        var input = form.querySelector('[name="' + name + '"]');
+        var wrap = input && input.closest(".field");
+        if (wrap) wrap.classList.add("autofilled");
+      });
+    });
+  }
 
   // "/" focuses global search
   document.addEventListener("keydown", function (e) {

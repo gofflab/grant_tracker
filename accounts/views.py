@@ -21,6 +21,8 @@ from django_otp import user_has_device
 from django_otp.plugins.otp_static.models import StaticDevice, StaticToken
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
+from grants.models import Person
+
 from .forms import LoginForm, ProfileForm, TokenForm, UserCreateForm, UserUpdateForm
 from .models import User
 from .permissions import owner_required
@@ -149,6 +151,7 @@ def profile(request):
             "backup_remaining": static.token_set.count() if static else 0,
             "feed_url": feed_url,
             "require_2fa": settings.REQUIRE_2FA,
+            "lab_pi": Person.lab_pi(),
         },
     )
 

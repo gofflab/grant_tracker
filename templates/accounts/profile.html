@@ -38,6 +38,24 @@
         {% endif %}
       </div>
     </div>
+    {% if user.is_owner %}
+    <div class="card">
+      <div class="card-head"><h2>Lab PI</h2>{% if lab_pi and lab_pi.user_id == user.pk %}<div class="actions"><span class="badge s-awarded">This is you</span></div>{% endif %}</div>
+      <div class="card-body">
+        {% if lab_pi and lab_pi.user_id == user.pk %}
+          <p class="mb-0">You are the Lab PI ({{ lab_pi }}). New applications add you to the team with the role from <em>My role</em>; add your person-months there. Effort and Current &amp; Pending open on you by default.</p>
+        {% elif lab_pi %}
+          <p class="mb-0">The Lab PI is <strong>{{ lab_pi }}</strong>{% if lab_pi.user %} (signs in as {{ lab_pi.user.username }}){% endif %}. Change it under <a href="{% url 'grants:settings' %}?tab=people">Settings → People</a>.</p>
+        {% else %}
+          <p>Mark yourself as the head of this lab. You'll be added to every new application's team automatically, and Effort and Current &amp; Pending will open on you.</p>
+          <form method="post" action="{% url 'grants:claim_lab_pi' %}">{% csrf_token %}
+            <button class="btn primary" type="submit">{% icon 'star' %} This is me: set me as Lab PI</button>
+          </form>
+          {% if user.person %}<p class="small muted mt-1 mb-0">Uses your existing person record, {{ user.person }}.</p>{% else %}<p class="small muted mt-1 mb-0">Creates a person record from your name ({{ user.get_full_name|default:user.username }}). Fill in your name above first if it's blank.</p>{% endif %}
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
     <div class="card">
       <div class="card-head"><h2>Calendar subscription</h2></div>
       <div class="card-body">

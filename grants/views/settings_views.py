@@ -1,10 +1,13 @@
 from django.contrib import messages
-from django.db.models import Count, ProtectedError
+from django.core.exceptions import PermissionDenied
+from django.db.models import Case, Count, IntegerField, ProtectedError, Value, When
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
-from accounts.permissions import editor_required
+from accounts.permissions import editor_required, owner_required
 
+from .. import services
 from ..forms import ChecklistItemFormSet, ChecklistTemplateForm, FunderForm, PersonForm, TagForm
 from ..models import ChecklistTemplate, Funder, Person, Tag
 from .common import done, render_form
@@ -23,7 +26,10 @@ def settings_home(request):
         ctx["items"] = Funder.objects.annotate(n_apps=Count("applications", distinct=True), n_opps=Count("opportunities", distinct=True))
     elif tab == "people":
         kind = request.GET.get("kind")
-        qs = Person.objects.annotate(n=Count("assignments")).select_related("user")
+        qs = Person.objects.annotate(
+            n=Count("assignments"),
+            lab_pi_first=Case(When(kind=Person.Kind.LAB_PI, then=Value(0)), default=Value(1), output_field=IntegerField()),
+        ).select_related("user").order_by("lab_pi_first", "-is_active", "last_name", "first_name")
         if kind:
             qs = qs.filter(kind=kind)
         ctx.update(items=qs, kinds=Person.Kind.choices, kind=kind)
@@ -37,12 +43,27 @@ def settings_home(request):
     return render(request, "grants/settings/home.html", ctx)
 
 
+def _form_kwargs(kind, request):
+    return {"user": request.user} if kind == "people" else {}
+
+
+@owner_required
+@require_POST
+def claim_lab_pi(request):
+    person, error = services.claim_lab_pi(request.user)
+    if error:
+        messages.error(request, error)
+    else:
+        messages.success(request, f"{person} is now the Lab PI. New applications will add you to the team automatically.")
+    return redirect(request.POST.get("next") or "accounts:profile")
+
+
 @editor_required
 def ref_create(request, kind):
     if kind not in MODELS:
         raise Http404
     model, form_class, label = MODELS[kind]
-    form = form_class(request.POST or None)
+    form = form_class(request.POST or None, **_form_kwargs(kind, request))
     if request.method == "POST" and form.is_valid():
         form.save()
         return done(request, f"{label.capitalize()} added.", refresh=True, redirect_to=f"/settings/?tab={kind}")
@@ -55,7 +76,7 @@ def ref_edit(request, kind, pk):
         raise Http404
     model, form_class, label = MODELS[kind]
     obj = get_object_or_404(model, pk=pk)
-    form = form_class(request.POST or None, instance=obj)
+    form = form_class(request.POST or None, instance=obj, **_form_kwargs(kind, request))
     if request.method == "POST" and form.is_valid():
         form.save()
         return done(request, "Saved.", refresh=True, redirect_to=f"/settings/?tab={kind}")
@@ -68,6 +89,8 @@ def ref_delete(request, kind, pk):
         raise Http404
     model, _, label = MODELS[kind]
     obj = get_object_or_404(model, pk=pk)
+    if isinstance(obj, Person) and obj.is_lab_pi and not request.user.is_owner:
+        raise PermissionDenied("Only an Owner can remove the Lab PI.")
     if request.method == "POST":
         try:
             obj.delete()

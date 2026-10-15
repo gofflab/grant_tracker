@@ -30,12 +30,12 @@
   {% for v, l in kinds %}<a class="btn sm {% if kind == v %}active{% endif %}" href="?tab=people&kind={{ v }}">{{ l }}</a>{% endfor %}
 </div>
 <div class="card">
-  <div class="card-head"><h2>People</h2><span class="muted small">Lab members, collaborators, program officers and administrators. Link your own record to your login so Effort and Current &amp; Pending default to you.</span>
+  <div class="card-head"><h2>People</h2><span class="muted small">Lab members, other PIs, collaborators, program officers and administrators. The Lab PI (you) is added to new applications automatically and is the default on Effort and Current &amp; Pending.</span>
     {% if user.can_edit %}<div class="actions"><button class="btn sm primary" hx-get="{% url 'grants:ref_create' 'people' %}" hx-target="#modal">{% icon 'plus' 14 %} Add person</button></div>{% endif %}</div>
   <div class="table-wrap"><table class="table">
     <thead><tr><th>Name</th><th>Type</th><th>Institution</th><th>Email</th><th>Login</th><th class="num">Projects</th><th></th></tr></thead>
     <tbody>{% for p in items %}<tr {% if not p.is_active %}class="muted"{% endif %}>
-      <td class="title-cell"><span style="font-weight:550">{{ p }}</span>{% if p.position %}<small>{{ p.position }}</small>{% endif %}</td>
+      <td class="title-cell"><span style="font-weight:550">{{ p }}</span>{% if p.is_lab_pi %} <span class="badge s-drafting plain" title="Head of this lab">{% icon 'star' 11 %} Lab PI</span>{% endif %}{% if p.position %}<small>{{ p.position }}</small>{% endif %}</td>
       <td>{{ p.get_kind_display }}</td><td>{{ p.institution|default:"—" }}</td>
       <td>{% if p.email %}<a href="mailto:{{ p.email }}">{{ p.email }}</a>{% else %}—{% endif %}</td>
       <td>{{ p.user.username|default:"—" }}</td><td class="num">{{ p.n }}</td>

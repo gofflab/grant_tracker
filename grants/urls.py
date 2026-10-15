@@ -23,6 +23,7 @@ urlpatterns = [
     # Opportunities
     path("opportunities/", opportunities.opportunity_list, name="opportunity_list"),
     path("opportunities/new/", opportunities.opportunity_create, name="opportunity_create"),
+    path("opportunities/import/", opportunities.opportunity_import, name="opportunity_import"),
     path("opportunities/<int:pk>/", opportunities.opportunity_detail, name="opportunity_detail"),
     path("opportunities/<int:pk>/edit/", opportunities.opportunity_edit, name="opportunity_edit"),
     path("opportunities/<int:pk>/status/", opportunities.opportunity_status, name="opportunity_status"),
@@ -67,6 +68,8 @@ urlpatterns = [
     path("awards/<int:pk>/", awards.award_detail, name="award_detail"),
     path("awards/<int:pk>/edit/", awards.award_edit, name="award_edit"),
     path("awards/<int:pk>/regenerate/", awards.award_regenerate, name="award_regenerate"),
+    path("awards/<int:pk>/status/", awards.award_status, name="award_status"),
+    path("awards/<int:pk>/delete/", awards.award_delete, name="award_delete"),
     path("awards/<int:award_pk>/periods/new/", awards.period_create, name="period_create"),
     path("periods/<int:pk>/edit/", awards.period_edit, name="period_edit"),
     path("periods/<int:pk>/delete/", awards.period_delete, name="period_delete"),
@@ -83,6 +86,7 @@ urlpatterns = [
     path("import/template.csv", importexport.import_template, name="import_template"),
     # Settings / reference data
     path("settings/", settings_views.settings_home, name="settings"),
+    path("settings/lab-pi/claim/", settings_views.claim_lab_pi, name="claim_lab_pi"),
     path("settings/templates/new/", settings_views.template_edit, name="template_create"),
     path("settings/templates/<int:pk>/", settings_views.template_edit, name="template_edit"),
     path("settings/templates/<int:pk>/delete/", settings_views.template_delete, name="template_delete"),

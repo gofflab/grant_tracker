@@ -1,0 +1,38 @@
+{% load gt %}<div class="card mb-2" style="max-width:1000px">
+  <div class="card-head">
+    <h2>{% icon 'sparkles' %} Found {{ extraction.rows|length }} detail{{ extraction.rows|length|pluralize }}</h2>
+    <span class="muted small">Read from: {{ extraction.sources|join:", " }}</span>
+    <div class="actions"><a class="btn ghost sm" href="{% url 'grants:opportunity_import' %}">Start over</a></div>
+  </div>
+  <div class="card-body">
+    {% if duplicate %}
+    <div class="alert warn">{% icon 'triangle-alert' %}<div>You already track this announcement: <a href="{{ duplicate.get_absolute_url }}">{{ duplicate.title }}</a>. Saving creates a second record.</div></div>
+    {% endif %}
+    {% if extraction.new_funder %}
+    <div class="alert info">{% icon 'building-2' %}<div>
+      Funder <strong>{{ extraction.new_funder.name }}</strong> isn't in your list yet.
+      <label class="inline-check mt-1"><input type="checkbox" name="create_funder" value="1" form="opportunity-form" checked>
+        Add it as a new funder when I save{% if extraction.new_funder.website %} ({{ extraction.new_funder.website }}){% endif %}</label>
+      <span class="small muted">Leave this checked unless you pick an existing funder below.</span>
+    </div></div>
+    {% endif %}
+    {% for note in extraction.notes %}<div class="alert info">{% icon 'circle-help' %}<div>{{ note }}</div></div>{% endfor %}
+    <p class="small ink-2">Highlighted fields below were filled in for you. Check them against the announcement, especially anything marked <span class="badge p-high plain">check</span>, then save.</p>
+    <details>
+      <summary class="small" style="cursor:pointer">Where each value came from</summary>
+      <div class="table-wrap mt-1"><table class="table compact">
+        <thead><tr><th>Field</th><th>Value</th><th>Source</th><th>Also found</th></tr></thead>
+        <tbody>
+        {% for r in extraction.rows %}
+          <tr>
+            <td class="nowrap">{{ r.label }}</td>
+            <td class="small" style="max-width:380px">{{ r.value|truncatechars:160 }}</td>
+            <td class="nowrap"><span class="badge {% if r.level == 'high' %}s-awarded{% elif r.level == 'medium' %}s-submitted{% else %}p-high{% endif %} plain" title="{{ r.snippet }}">{% if r.level == 'low' %}check · {% endif %}{{ r.source }}</span></td>
+            <td class="small muted">{% for value, source in r.others %}{{ value|truncatechars:60 }} <span class="muted">({{ source }})</span>{% if not forloop.last %}<br>{% endif %}{% endfor %}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </details>
+  </div>
+</div>

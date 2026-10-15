@@ -219,7 +219,10 @@ class DocumentForm(StyledModelForm):
 class PersonnelForm(StyledModelForm):
     new_first_name = forms.CharField(required=False, label="First name")
     new_last_name = forms.CharField(required=False, label="Last name")
-    new_kind = forms.ChoiceField(required=False, choices=Person.Kind.choices, label="Type", initial=Person.Kind.LAB)
+    new_kind = forms.ChoiceField(
+        required=False, label="Type", initial=Person.Kind.LAB,
+        choices=[c for c in Person.Kind.choices if c[0] != Person.Kind.LAB_PI],
+    )
 
     class Meta:
         model = Personnel
@@ -345,6 +348,32 @@ class PersonForm(StyledModelForm):
         model = Person
         exclude = ["created_at", "updated_at"]
 
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+        kind = self.fields["kind"]
+        kind.help_text = (
+            "Lab PI is you, the head of this lab: one person only, linked to an Owner login. "
+            "Use Principal investigator for other labs' PIs (e.g. MPI partners)."
+        )
+        if user is not None and not user.is_owner:
+            if self.instance.pk and self.instance.is_lab_pi:
+                kind.disabled = True
+                self.fields["user"].disabled = True
+            else:
+                kind.choices = [c for c in kind.choices if c[0] != Person.Kind.LAB_PI]
+
+    def clean(self):
+        data = super().clean()
+        if data.get("kind") == Person.Kind.LAB_PI:
+            other = Person.objects.filter(kind=Person.Kind.LAB_PI).exclude(pk=self.instance.pk).first()
+            if other:
+                self.add_error("kind", f"{other} is already the Lab PI. Change their type first.")
+            linked = data.get("user")
+            if linked is not None and not linked.is_owner:
+                self.add_error("user", "The Lab PI must be linked to an Owner account.")
+        return data
+
 
 class TagForm(forms.ModelForm):
     class Meta:
@@ -372,3 +401,54 @@ class ApplyChecklistForm(forms.Form):
 class ImportForm(forms.Form):
     csv_file = forms.FileField(label="CSV file", help_text="UTF-8 CSV with a header row. Download the template for column names.")
     dry_run = forms.BooleanField(required=False, initial=True, label="Preview only (don't save)")
+
+
+class AwardDeleteForm(forms.Form):
+    move_to = forms.ChoiceField(label="Move the application to")
+    delete_tasks = forms.BooleanField(required=False, initial=True)
+    reason = forms.CharField(required=False, max_length=200, label="Reason (optional)",
+                             widget=forms.TextInput(attrs={"placeholder": "e.g. marked awarded by mistake"}))
+    confirm = forms.CharField(label="Type DELETE to confirm", max_length=10,
+                              widget=forms.TextInput(attrs={"autocomplete": "off", "spellcheck": "false"}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["move_to"].choices = [
+            (value, "Keep it Awarded (I'll create a new award record)" if value == Application.Status.AWARDED else label)
+            for value, label in Application.Status.choices
+        ]
+
+    def clean_confirm(self):
+        value = self.cleaned_data["confirm"].strip()
+        if value.upper() != "DELETE":
+            raise forms.ValidationError("Type DELETE to confirm.")
+        return value
+
+
+class OpportunityImportForm(forms.Form):
+    source = forms.CharField(
+        required=False, max_length=1000, label="Link or announcement number",
+        widget=forms.TextInput(attrs={"placeholder": "https://grants.nih.gov/grants/guide/pa-files/PAR-25-131.html  or  PAR-25-131", "autofocus": True}),
+    )
+    upload = forms.FileField(required=False, label="Or upload the announcement",
+                             help_text="PDF, Word, HTML or text file, up to 25 MB")
+    pasted = forms.CharField(required=False, label="Or paste its text",
+                             widget=forms.Textarea(attrs={"rows": 6, "placeholder": "Paste the announcement or the page text here"}))
+    use_ai = forms.BooleanField(required=False, initial=True, label="Use AI to read it (Claude)")
+
+    IMPORT_EXTENSIONS = (".pdf", ".docx", ".html", ".htm", ".txt", ".md")
+
+    def clean_upload(self):
+        f = self.cleaned_data.get("upload")
+        if f:
+            if not f.name.lower().endswith(self.IMPORT_EXTENSIONS):
+                raise forms.ValidationError("Upload a PDF, Word, HTML or text file.")
+            if f.size > 25 * 1024 * 1024:
+                raise forms.ValidationError("That file is larger than 25 MB.")
+        return f
+
+    def clean(self):
+        data = super().clean()
+        if not (data.get("source", "").strip() or data.get("upload") or data.get("pasted", "").strip()):
+            raise forms.ValidationError("Paste a link or announcement number, upload the announcement, or paste its text.")
+        return data

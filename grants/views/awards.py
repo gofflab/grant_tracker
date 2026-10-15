@@ -6,10 +6,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from accounts.permissions import editor_required
+from accounts.permissions import editor_required, owner_required
 
 from .. import services
-from ..forms import AwardForm, BudgetPeriodForm
+from ..forms import AwardDeleteForm, AwardForm, BudgetPeriodForm
 from ..models import Activity, Application, Award, BudgetPeriod, Task, log_activity
 from .common import done, render_form
 
@@ -113,6 +113,8 @@ def award_detail(request, pk):
         "personnel": app.personnel.select_related("person"),
         "documents": docs,
         "current": next((p for p in periods if p.is_current), None),
+        "award_statuses": Award.Status.choices,
+        "period_over": award.is_active and award.days_remaining is not None and award.days_remaining < 0,
     })
 
 
@@ -145,6 +147,53 @@ def award_create(request, app_pk):
         app.refresh_from_db()
     award = getattr(app, "award", None) or services.create_award(app, request.user)
     return redirect("grants:award_edit", pk=award.pk)
+
+
+@editor_required
+@require_POST
+def award_status(request, pk):
+    award = get_object_or_404(Award, pk=pk)
+    status = request.POST.get("status")
+    if status in Award.Status.values and status != award.status:
+        award.status = status
+        award.save(update_fields=["status", "updated_at"])
+        log_activity(award.application, request.user, Activity.Kind.AWARD, f"Award marked {award.get_status_display().lower()}")
+    return done(request, f"Award marked {award.get_status_display().lower()}.", refresh=True, redirect_to=award.get_absolute_url())
+
+
+@owner_required
+def award_delete(request, pk):
+    award = get_object_or_404(Award.objects.select_related("application"), pk=pk)
+    app = award.application
+    bound = request.method == "POST"
+    form = AwardDeleteForm(request.POST if bound else None, initial={"move_to": services.status_before_award(app)})
+    if bound and form.is_valid():
+        data = form.cleaned_data
+        summary = services.delete_award(award, request.user, data["move_to"], data["delete_tasks"], data["reason"].strip())
+        parts = [f"{summary['periods']} budget year{'s' if summary['periods'] != 1 else ''}"]
+        if data["delete_tasks"]:
+            parts.append(f"{summary['tasks']} task{'s' if summary['tasks'] != 1 else ''}")
+        message = f"Award deleted, with {' and '.join(parts)}."
+        if summary["status"]:
+            message += f" Application moved to {summary['status']}."
+        return done(request, message, redirect_to=app.get_absolute_url())
+    tasks = services.award_generated_tasks(award)
+    done_tasks = sum(1 for t in tasks if t.is_done)
+    periods = list(award.periods.all())
+    real_data = [label for label, present in (
+        ("an award number", bool(award.award_number)),
+        ("an account number", bool(award.account_number)),
+        ("a Notice of Award recorded after year 1", any(p.status == "awarded" and p.number > 1 for p in periods)),
+        ("spending recorded", any(p.spent_to_date for p in periods)),
+        (f"{done_tasks} completed task{'s' if done_tasks != 1 else ''}", bool(done_tasks)),
+    ) if present]
+    return render_form(request, "grants/awards/delete.html", {
+        "form": form, "award": award, "app": app, "danger": True,
+        "periods": periods, "tasks": tasks, "task_count": len(tasks), "done_tasks": done_tasks,
+        "real_data": real_data,
+        "documents": app.documents.filter(category__in=["noa", "progress", "financial", "jit"]).count(),
+        "personnel": app.personnel.count(),
+    }, "Delete award record", submit_label="Delete award", size="wide")
 
 
 @editor_required

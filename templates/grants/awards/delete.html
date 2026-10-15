@@ -1,0 +1,46 @@
+{% extends base_template %}{% load gt %}
+{% block form_body %}
+<div x-data="{ delTasks: {% if form.is_bound %}{{ form.delete_tasks.value|yesno:'true,false' }}{% else %}true{% endif %} }">
+  <div class="alert bad">{% icon 'triangle-alert' %}<div>
+    <strong>This permanently deletes the award record for “{{ app.display_title }}”{% if award.award_number %} ({{ award.award_number }}){% endif %}.</strong>
+    It can't be undone from Grant Tracker. Use it for an award that was created by mistake.
+  </div></div>
+  {% if real_data %}
+  <div class="alert warn">{% icon 'triangle-alert' %}<div>
+    This award has real data: {{ real_data|join:", " }}. If the grant is genuine and simply finished, set its status to
+    <strong>Ended</strong> or <strong>Closed</strong> instead (the ⋯ menu on the award page).
+  </div></div>
+  {% endif %}
+  <div class="grid grid-2 mb-2">
+    <div>
+      <h3>Deleted</h3>
+      <ul class="small" style="padding-left:18px;margin:6px 0 0">
+        <li>Award details: dates, amounts, F&amp;A rate, account, terms and notes</li>
+        <li>{{ periods|length }} budget year{{ periods|length|pluralize }}</li>
+        <li x-show="delTasks">{{ task_count }} task{{ task_count|pluralize }} the award generated{% if done_tasks %}, including {{ done_tasks }} marked done{% endif %}</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Kept</h3>
+      <ul class="small" style="padding-left:18px;margin:6px 0 0">
+        <li>The application, its status history and reviews</li>
+        <li>All documents{% if documents %}, including {{ documents }} award document{{ documents|pluralize }} such as the Notice of Award{% endif %}</li>
+        {% if personnel %}<li>{{ personnel }} team member{{ personnel|pluralize }}; their effort follows the application's new status</li>{% endif %}
+        <li x-show="!delTasks" x-cloak>The {{ task_count }} generated task{{ task_count|pluralize }}</li>
+        <li>Tasks you added yourself</li>
+      </ul>
+    </div>
+  </div>
+  <div class="form-grid">
+    {% include "_form_errors.html" %}
+    {% include "_field.html" with field=form.move_to span="span-6" %}
+    {% include "_field.html" with field=form.reason span="span-6" %}
+    <div class="field span-12 check">
+      <input type="checkbox" name="delete_tasks" id="id_delete_tasks" x-model="delTasks" {% if not form.is_bound or form.delete_tasks.value %}checked{% endif %}>
+      <div><label for="id_delete_tasks">Also delete the {{ task_count }} task{{ task_count|pluralize }} the award generated</label>
+        <span class="help">Reporting schedule and award-setup checklist{% if done_tasks %}, including {{ done_tasks }} already marked done{% endif %}.</span></div>
+    </div>
+    {% include "_field.html" with field=form.confirm span="span-6" %}
+  </div>
+</div>
+{% endblock %}
