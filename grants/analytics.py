@@ -39,8 +39,17 @@ def year_of(d, basis):
     return fiscal_year(d) if basis == "fy" else d.year
 
 
+def placement_date(app):
+    """The date that puts an application in a year: submitted, else the deadline, else when it was decided or awarded."""
+    award = getattr(app, "award", None)
+    dates = [app.submitted_on, app.sponsor_deadline, app.decision_on]
+    if award:
+        dates += [award.notice_date, award.start_date]
+    return next((d for d in dates if d), None)
+
+
 def submission_year(app, basis):
-    d = app.submitted_on or app.sponsor_deadline
+    d = placement_date(app)
     return year_of(d, basis) if d else None
 
 
@@ -155,12 +164,19 @@ def rate_by(apps, key_fn, min_n=1, limit=10):
     return rows[:limit]
 
 
-def awarded_by_year(years, basis):
+def awarded_by_year(apps, years, basis):
+    """Total costs awarded to these applications, by year of award (notice, decision or start date)."""
     index = {y: i for i, y in enumerate(years)}
     data = [0.0] * len(years)
-    for award in Award.objects.select_related("application"):
-        d = award.notice_date or award.application.decision_on or award.start_date
-        amount = award.awarded_total or award.application.requested_total
+    for app in apps:
+        award = getattr(app, "award", None)
+        if award:
+            d = award.notice_date or app.decision_on or award.start_date
+            amount = award.awarded_total or app.requested_total
+        elif app.status == Application.Status.AWARDED:
+            d, amount = app.decision_on, app.requested_total
+        else:
+            continue
         if d and amount:
             y = year_of(d, basis)
             if y in index:

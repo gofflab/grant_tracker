@@ -2,7 +2,7 @@
 {% block title %}Analytics{% endblock %}
 {% block content %}
 <div class="page-head">
-  <div class="titles"><h1>Analytics</h1><div class="subtitle">Trends across submitted applications. Years follow the submission date (or deadline if not recorded).</div></div>
+  <div class="titles"><h1>Analytics</h1><div class="subtitle">Trends across submitted applications. Years follow the submission date, or the deadline if that isn't recorded, or failing both the decision or award date.</div></div>
 </div>
 
 <form class="filters" method="get" x-data>
@@ -32,10 +32,22 @@
 <div class="stats">
   <div class="stat"><div class="stat-label">Submitted</div><div class="stat-value">{{ tiles.submitted }}</div><div class="stat-sub">{{ tiles.pending }} still pending</div></div>
   <div class="stat"><div class="stat-label">Success rate</div><div class="stat-value">{% if tiles.rate is not None %}{{ tiles.rate }}%{% else %}—{% endif %}</div><div class="stat-sub">{{ tiles.awarded }} awarded of {{ tiles.decided }} decided</div></div>
-  <div class="stat"><div class="stat-label">Total awarded</div><div class="stat-value">{{ tiles.total_awarded|money_short }}</div><div class="stat-sub">Total costs</div></div>
+  <div class="stat"><div class="stat-label">Total awarded</div><div class="stat-value">{{ tiles.total_awarded|money_short }}</div><div class="stat-sub">Total costs, by year of award</div></div>
   <div class="stat"><div class="stat-label">Median time to decision</div><div class="stat-value">{% if tiles.median_time is not None %}{{ tiles.median_time|floatformat:1 }} mo{% else %}—{% endif %}</div><div class="stat-sub">Submission to award / decline</div></div>
   <div class="stat"><div class="stat-label">Median percentile</div><div class="stat-value">{% if tiles.median_percentile is not None %}{{ tiles.median_percentile|floatformat:0 }}{% else %}—{% endif %}</div><div class="stat-sub">Scored applications</div></div>
 </div>
+
+{% if placed_late or undated %}{% with n=placed_late|length m=undated|length %}
+<div class="alert info">{% icon 'calendar-clock' %}<div style="flex:1">
+  {% if n %}{{ n }} application{{ n|pluralize }} in this range {{ n|pluralize:"has,have" }} no submitted date or deadline, so {{ n|pluralize:"it is,they are" }} placed by {{ n|pluralize:"its,their" }} decision or award date.{% endif %}
+  {% if m %}{{ m }} application{{ m|pluralize }} {{ m|pluralize:"has,have" }} no dates at all and {{ m|pluralize:"is,are" }} left out of these numbers.{% endif %}
+  Add a submitted date to place {{ n|add:m|pluralize:"it,them" }} exactly.
+  <details><summary>Show which</summary><ul>
+    {% for a, year in placed_late %}<li><a href="{{ a.get_absolute_url }}">{{ a.display_title }}</a> <span class="muted small">{{ a.get_status_display }}, placed in {{ year }}</span></li>{% endfor %}
+    {% for a in undated %}<li><a href="{{ a.get_absolute_url }}">{{ a.display_title }}</a> <span class="muted small">{{ a.get_status_display }}, no dates</span></li>{% endfor %}
+  </ul></details>
+</div></div>
+{% endwith %}{% endif %}
 
 <div class="grid grid-2">
   <div class="card">

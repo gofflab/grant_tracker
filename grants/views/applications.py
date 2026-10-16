@@ -127,12 +127,15 @@ def application_board(request):
     )
     for status in statuses:
         items = qs.filter(status=status)
-        if status in Application.CLOSED and not show_all:
+        recent_only = status in Application.CLOSED and not show_all
+        if recent_only:
             items = items.filter(Q(decision_on__gte=since) | Q(decision_on__isnull=True, updated_at__date__gte=since))
         items = items.order_by(F("sponsor_deadline").asc(nulls_last=True), "-updated_at")
-        columns.append({"status": status, "label": Application.Status(status).label, "items": list(items)})
+        columns.append({"status": status, "label": Application.Status(status).label, "items": list(items),
+                        "recent_only": recent_only})
     return render(request, "grants/applications/board.html", {
-        "columns": columns, "show_all": show_all, "funders": Funder.objects.filter(applications__isnull=False).distinct(),
+        "columns": columns, "show_all": show_all, "since": since,
+        "funders": Funder.objects.filter(applications__isnull=False).distinct(),
     })
 
 
@@ -260,6 +263,10 @@ def application_create(request):
             template = ChecklistTemplate.objects.filter(pk=template_id).first()
             if template:
                 services.apply_checklist(app, template, request.user)
+        if app.status == Application.Status.AWARDED:
+            award = services.create_award(app, request.user, existing=True)
+            messages.success(request, "Application created with an award record. Add the award details.")
+            return redirect("grants:award_edit", pk=award.pk)
         messages.success(request, "Application created.")
         return redirect(app)
     return render(request, "grants/applications/form.html", {

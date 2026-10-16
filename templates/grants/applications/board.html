@@ -12,14 +12,14 @@
       </select>
       {% if show_all %}<input type="hidden" name="all" value="1">{% endif %}
     </form>
-    <a class="btn" href="?{% if not show_all %}all=1{% endif %}">{% if show_all %}Hide closed columns{% else %}Show all columns{% endif %}</a>
+    <a class="btn" href="?{% if not show_all %}all=1{% endif %}"{% if not show_all %} title="All columns, including outcomes decided before {{ since|date:'M Y' }}"{% endif %}>{% if show_all %}Recent only{% else %}Show everything{% endif %}</a>
     <a class="btn" href="{% url 'grants:application_list' %}">{% icon 'rows-3' %} List</a>
   </div>
 </div>
 <div class="board">
   {% for col in columns %}
   <section class="column" aria-label="{{ col.label }}">
-    <div class="column-head">{% status_badge col.status col.label %}<span class="count" data-count>{{ col.items|length }}</span></div>
+    <div class="column-head">{% status_badge col.status col.label %}{% if col.recent_only %}<span class="muted small" title="Decided since {{ since|date:'M j, Y' }}. Show everything to see older outcomes.">since {{ since|date:"M Y" }}</span>{% endif %}<span class="count" data-count>{{ col.items|length }}</span></div>
     <div class="column-body" data-sortable-status="{{ col.status }}" {% if not user.can_edit %}data-readonly{% endif %}>
       {% for app in col.items %}
       <article class="kcard" data-id="{{ app.pk }}" data-status-url="{% url 'grants:application_status' app.pk %}">
