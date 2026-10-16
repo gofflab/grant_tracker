@@ -1,6 +1,7 @@
 import json
 
 from django import forms
+from django.db.models import Q
 from django.forms import inlineformset_factory
 
 from accounts.models import User
@@ -84,9 +85,10 @@ class TagFieldMixin:
         )
 
     def save_tags(self, instance):
-        names = [n.strip() for n in (self.cleaned_data.get("new_tags") or "").split(",") if n.strip()]
+        # Cut to the stored length before looking up, so a long tag matches itself the second time.
+        names = [n.strip()[:60] for n in (self.cleaned_data.get("new_tags") or "").split(",") if n.strip()]
         for name in names:
-            tag, _ = Tag.objects.get_or_create(name__iexact=name, kind=Tag.Kind.TOPIC, defaults={"name": name[:60]})
+            tag, _ = Tag.objects.get_or_create(name__iexact=name, kind=Tag.Kind.TOPIC, defaults={"name": name})
             instance.tags.add(tag)
 
 
@@ -164,8 +166,10 @@ class TaskForm(StyledModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["application"].queryset = Application.objects.exclude(
-            status__in=[Application.Status.NOT_PURSUED, Application.Status.WITHDRAWN]
+        # Closed-out applications aren't offered for new tasks, but a task already on one stays editable.
+        dropped = Q(status__in=[Application.Status.NOT_PURSUED, Application.Status.WITHDRAWN])
+        self.fields["application"].queryset = Application.objects.filter(
+            ~dropped | Q(pk=self.instance.application_id)
         ).order_by("title")
         self.fields["application"].required = False
         self.fields["assignee"].queryset = User.objects.filter(is_active=True)
@@ -273,9 +277,9 @@ class ReviewFeedbackForm(StyledModelForm):
     def save(self, commit=True):
         obj = super().save(commit=commit)
         if commit:
-            for name in [n.strip() for n in (self.cleaned_data.get("new_themes") or "").split(",") if n.strip()]:
+            for name in [n.strip()[:60] for n in (self.cleaned_data.get("new_themes") or "").split(",") if n.strip()]:
                 tag, _ = Tag.objects.get_or_create(
-                    name__iexact=name, kind=Tag.Kind.CRITIQUE, defaults={"name": name[:60], "color": Tag.Color.GRAY}
+                    name__iexact=name, kind=Tag.Kind.CRITIQUE, defaults={"name": name, "color": Tag.Color.GRAY}
                 )
                 obj.themes.add(tag)
         return obj

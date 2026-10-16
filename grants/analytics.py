@@ -165,18 +165,22 @@ def rate_by(apps, key_fn, min_n=1, limit=10):
 
 
 def awarded_by_year(apps, years, basis):
-    """Total costs awarded to these applications, by year of award (notice, decision or start date)."""
+    """Total costs awarded to these applications, by year of award (notice, decision or start date).
+
+    Only applications currently marked Awarded count, matching the success rate; an award record left on
+    an application moved to another status is ignored.
+    """
     index = {y: i for i, y in enumerate(years)}
     data = [0.0] * len(years)
     for app in apps:
+        if app.status != Application.Status.AWARDED:
+            continue
         award = getattr(app, "award", None)
         if award:
             d = award.notice_date or app.decision_on or award.start_date
             amount = award.awarded_total or app.requested_total
-        elif app.status == Application.Status.AWARDED:
-            d, amount = app.decision_on, app.requested_total
         else:
-            continue
+            d, amount = app.decision_on, app.requested_total
         if d and amount:
             y = year_of(d, basis)
             if y in index:

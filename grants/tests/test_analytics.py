@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from decimal import Decimal
+from unittest import mock
 
 from django.test import TestCase
 from django.urls import reverse
@@ -45,6 +46,13 @@ class AnalyticsMathTests(TestCase):
         all_ctx = self.get()
         self.assertEqual(all_ctx["tiles"]["total_awarded"], 2500000)
         self.assertEqual(sum(all_ctx["raw"]["awarded"]["series"][0]["data"]), all_ctx["tiles"]["total_awarded"])
+
+    def test_award_record_left_on_a_non_awarded_application_is_not_counted(self):
+        moved = past_award("Moved to not funded", date(self.year - 1, 7, 1), "900000")
+        services.change_status(moved, Application.Status.NOT_FUNDED)
+        ctx = self.get(funder=nih().pk)
+        self.assertEqual(ctx["tiles"]["total_awarded"], 2000000)
+        self.assertEqual(ctx["tiles"]["awarded"], 1)
 
     def test_application_with_no_dates_is_listed_not_counted(self):
         make_app(title="Mystery award", status=Application.Status.AWARDED)
@@ -92,6 +100,19 @@ class CreateAsAwardedTests(TestCase):
         form = self.client.get(reverse("grants:award_edit", args=[award.pk])).context["form"]
         self.assertFalse(form.initial["generate_schedule"])
 
+    def test_ongoing_award_is_offered_a_reporting_schedule(self):
+        today = timezone.localdate()
+        self.post(proposed_start=str(today - timedelta(days=400)), proposed_end=str(today + timedelta(days=1400)))
+        award = Application.objects.get(title="Past R01").award
+        self.assertEqual(award.status, Award.Status.ACTIVE)
+        self.assertTrue(award.periods.exists())
+        form = self.client.get(reverse("grants:award_edit", args=[award.pk])).context["form"]
+        self.assertTrue(form.initial["generate_schedule"])
+        # Once the schedule exists, editing the award doesn't offer it again.
+        services.generate_reporting_tasks(award, self.user)
+        form = self.client.get(reverse("grants:award_edit", args=[award.pk])).context["form"]
+        self.assertFalse(form.initial["generate_schedule"])
+
     def test_ongoing_award_without_dates_stays_active(self):
         self.post()
         award = Application.objects.get(title="Past R01").award
@@ -119,6 +140,35 @@ class LateStatusDateTests(TestCase):
         services.change_status(app, Application.Status.SUBMITTED, self.user)
         app.refresh_from_db()
         self.assertEqual(app.submitted_on, today)
+
+
+class LateAwardNoticeDateTests(TestCase):
+    def test_status_dialog_date_becomes_the_notice_date(self):
+        self.client.force_login(make_user())
+        app = make_app(status=Application.Status.PENDING_AWARD)
+        self.client.post(reverse("grants:application_status", args=[app.pk]),
+                         {"status": "awarded", "effective_date": "2022-05-01"}, HTTP_HX_REQUEST="true")
+        app.refresh_from_db()
+        self.assertEqual(app.award.notice_date, date(2022, 5, 1))
+        self.assertEqual(analytics.awarded_by_year([app], [2022, 2026], "cy"), [0.0, 0.0])  # no amount entered
+        app.award.awarded_total = Decimal("100")
+        app.award.save()
+        self.assertEqual(analytics.awarded_by_year([app], [2022, 2026], "cy"), [100.0, 0.0])
+
+    def test_live_award_without_decision_date_is_noticed_today(self):
+        app = make_app(status=Application.Status.PENDING_AWARD)
+        services.change_status(app, Application.Status.AWARDED)
+        self.assertEqual(app.award.notice_date, timezone.localdate())
+
+
+class DashboardLeapDayTests(TestCase):
+    def test_dashboard_renders_on_february_29(self):
+        self.client.force_login(make_user())
+        past_award("Old R01", date(2023, 3, 1), "1000")
+        with mock.patch("django.utils.timezone.localdate", return_value=date(2028, 2, 29)):
+            r = self.client.get(reverse("grants:dashboard"))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["kpi"]["awarded_n"], 1)
 
 
 class BoardOutcomeWindowTests(TestCase):

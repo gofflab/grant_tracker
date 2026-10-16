@@ -10,7 +10,8 @@ from django.utils import timezone
 
 from accounts.models import User
 from grants import services
-from grants.models import Application, Award, Document, Funder, Opportunity, Task
+from grants.forms import TaskForm
+from grants.models import Application, Award, Document, Funder, Opportunity, Tag, Task
 
 from .helpers import add_person, make_app, make_user
 
@@ -272,6 +273,50 @@ class ImportTests(TestCase):
         self.assertEqual(fg.award.award_number, "BNF-1")
         self.assertEqual(fg.award.periods.count(), 2)
         self.assertEqual(fg.requested_total, 250000)
+
+
+class ClosedApplicationTaskTests(TestCase):
+    def setUp(self):
+        self.client.force_login(make_user())
+        self.app = make_app(title="Withdrawn one", status=Application.Status.WITHDRAWN)
+        self.task = Task.objects.create(application=self.app, title="Tell the co-Is")
+
+    def test_task_on_withdrawn_application_can_still_be_edited(self):
+        r = self.client.post(f"/tasks/{self.task.pk}/edit/", {
+            "title": "Tell the co-Is", "application": self.app.pk, "category": self.task.category,
+            "status": Task.Status.DONE, "priority": self.task.priority,
+        })
+        self.assertIn(r.status_code, (302, 204), getattr(r, "context", None) and r.context["form"].errors)
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.status, Task.Status.DONE)
+
+    def test_withdrawn_application_is_not_offered_for_new_tasks(self):
+        self.assertNotIn(self.app, TaskForm().fields["application"].queryset)
+        self.assertIn(self.app, TaskForm(instance=self.task).fields["application"].queryset)
+
+
+class LongTagTests(TestCase):
+    def setUp(self):
+        self.client.force_login(make_user())
+
+    def test_long_topic_tag_is_reused_on_the_second_application(self):
+        long_tag = "y" * 75
+        for title in ("First", "Second"):
+            r = self.client.post("/applications/new/", {"title": title, "initial_status": "planning", "new_tags": long_tag,
+                                                       "submission_type": "new", "priority": "medium", "role": "pi"})
+            self.assertEqual(r.status_code, 302)
+        self.assertEqual(Tag.objects.get(name="y" * 60).applications.count(), 2)
+
+    def test_long_critique_theme_is_reused(self):
+        app = make_app()
+        for reviewer in ("Reviewer 1", "Reviewer 2"):
+            r = self.client.post(f"/applications/{app.pk}/feedback/new/", {
+                "source": "reviewer", "reviewer_label": reviewer, "new_themes": "z" * 80,
+                "criteria-TOTAL_FORMS": "0", "criteria-INITIAL_FORMS": "0", "criteria-MIN_NUM_FORMS": "0",
+                "criteria-MAX_NUM_FORMS": "1000",
+            }, **HX)
+            self.assertEqual(r.status_code, 204, r.content[:300])
+        self.assertEqual(Tag.objects.get(kind=Tag.Kind.CRITIQUE, name="z" * 60).feedback.count(), 2)
 
 
 class DemoDataTests(TestCase):

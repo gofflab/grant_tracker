@@ -125,9 +125,23 @@ def parse_decimal(value):
         multiplier = 1000 if value[-1].lower() == "k" else 1_000_000
         value = value[:-1]
     try:
-        return Decimal(value) * multiplier
+        number = Decimal(value) * multiplier
     except InvalidOperation:
         raise ValueError(f"not a number “{value}”")
+    if not number.is_finite():
+        raise ValueError(f"not a number “{value}”")
+    return number
+
+
+def fits(model, field, value):
+    """Return `value`, or raise ValueError if it is too large for the field's database column."""
+    if value is None:
+        return value
+    f = model._meta.get_field(field)
+    limit = Decimal(10) ** (f.max_digits - f.decimal_places)
+    if abs(value) >= limit or round(abs(value), f.decimal_places) >= limit:
+        raise ValueError(f"“{value}” is too large")
+    return value
 
 
 def match_choice(choices, value, default=None):
@@ -157,8 +171,12 @@ def import_rows(rows, user, dry_run=True):
     results = []
     with transaction.atomic():
         for i, row in enumerate(rows, start=2):
+            extra = [v for v in (row.pop(None, None) or []) if (v or "").strip()]
             row = {(k or "").strip().lower(): (v or "").strip() for k, v in row.items()}
             errors = []
+            if extra:
+                errors.append(f"{len(extra)} more value{'s' if len(extra) > 1 else ''} than the header row "
+                              "(check for an unquoted comma)")
             title = row.get("title")
             if not title:
                 results.append({"line": i, "ok": False, "title": "", "errors": ["title is required"]})
@@ -191,19 +209,21 @@ def import_rows(rows, user, dry_run=True):
                     errors.append(f"{field}: {e}")
             for field in ("requested_direct_total", "requested_total", "impact_score", "percentile"):
                 try:
-                    setattr(app, field, parse_decimal(row.get(field)))
+                    setattr(app, field, fits(Application, field, parse_decimal(row.get(field))))
                 except ValueError as e:
                     errors.append(f"{field}: {e}")
             if row.get("probability"):
                 try:
                     app.probability = int(parse_decimal(row["probability"]))
+                    if not 0 <= app.probability <= 100:
+                        raise ValueError("enter a percentage from 0 to 100")
                 except (ValueError, TypeError) as e:
                     errors.append(f"probability: {e}")
             award_data = {}
             try:
                 award_data = {
                     "award_number": row.get("award_number", "")[:60],
-                    "awarded_total": parse_decimal(row.get("awarded_total")),
+                    "awarded_total": fits(Award, "awarded_total", parse_decimal(row.get("awarded_total"))),
                     "start_date": parse_date(row.get("award_start")),
                     "end_date": parse_date(row.get("award_end")),
                 }
@@ -220,8 +240,8 @@ def import_rows(rows, user, dry_run=True):
                 continue
             app.funder = funder
             app.save()
-            for name in [t.strip() for t in re.split(r"[;,]", row.get("tags", "")) if t.strip()]:
-                tag, _ = Tag.objects.get_or_create(name__iexact=name, kind=Tag.Kind.TOPIC, defaults={"name": name[:60]})
+            for name in [t.strip()[:60] for t in re.split(r"[;,]", row.get("tags", "")) if t.strip()]:
+                tag, _ = Tag.objects.get_or_create(name__iexact=name, kind=Tag.Kind.TOPIC, defaults={"name": name})
                 app.tags.add(tag)
             services.add_lab_pi(app)
             log_activity(app, user, Activity.Kind.CREATED, "Imported from CSV")

@@ -10,7 +10,7 @@ from django.shortcuts import render
 from django.utils import timezone
 
 from ..effort import effort_by_year, effort_summary, project_person_months
-from ..models import Application, Person
+from ..models import Application, Person, Personnel
 from .common import json_for_chart
 
 
@@ -82,9 +82,10 @@ def _support_items(person, include_preparing=False):
     apps = (
         Application.objects.filter(personnel__person=person, status__in=statuses)
         .select_related("funder", "award")
-        .prefetch_related("personnel")
+        .prefetch_related("personnel__person")
         .distinct()
     )
+    lab_pi = Person.lab_pi()
     active, pending = [], []
     for app in apps:
         award = getattr(app, "award", None)
@@ -98,7 +99,11 @@ def _support_items(person, include_preparing=False):
         role = lines[0].get_role_display() if lines else ""
         start = (award.start_date if award else None) or app.proposed_start
         end = (award.effective_end if award else None) or app.proposed_end
-        pi = app.contact_pi or (person.full_name if app.role in ("pi", "mpi") else "")
+        # PD/PI is the named contact PI, else the PI/MPI on the team. "My role" describes the Lab PI, not
+        # the person this report is for.
+        leads = [l.person.full_name for l in app.personnel.all() if l.role in (Personnel.Role.PI, Personnel.Role.MPI)]
+        lab_lead = lab_pi.full_name if lab_pi and app.role in (Application.Role.PI, Application.Role.MPI) else ""
+        pi = app.contact_pi or ", ".join(dict.fromkeys(leads)) or lab_lead
         bucket.append({
             "app": app,
             "title": app.title,
