@@ -72,7 +72,9 @@ def change_status(application, new_status, user=None, note=""):
     application.status = new_status
     fields = ["status", "updated_at"]
     if new_status in Application.PENDING + [Application.Status.AWARDED] and not application.submitted_on:
-        application.submitted_on = today
+        # A deadline that has already passed is a better guess than today for a status recorded late.
+        deadline = application.sponsor_deadline
+        application.submitted_on = deadline if deadline and deadline <= today else today
         fields.append("submitted_on")
     if new_status in Application.DECIDED and not application.decision_on:
         application.decision_on = today
@@ -104,19 +106,31 @@ def change_status(application, new_status, user=None, note=""):
 
 
 @transaction.atomic
-def create_award(application, user=None):
+def create_award(application, user=None, existing=False):
+    """Create the award record, award-setup checklist, budget years and reporting schedule.
+
+    `existing` records an award made before it was entered here (for example, a past grant added as
+    Awarded): budget years only, no setup or reporting tasks, the decision date as the notice date, and
+    Closed if the project period is already over.
+    """
     funder = application.funder
+    today = timezone.localdate()
+    end = application.proposed_end
     award = Award.objects.create(
         application=application,
         start_date=application.proposed_start,
-        end_date=application.proposed_end,
+        end_date=end,
         awarded_direct_total=application.requested_direct_total,
         awarded_total=application.requested_total,
         fa_rate=application.fa_rate,
         reporting=funder.default_reporting if funder else Funder.Reporting.ANNUAL,
-        notice_date=timezone.localdate(),
+        notice_date=application.decision_on if existing else today,
+        status=Award.Status.CLOSED if existing and end and end < today else Award.Status.ACTIVE,
     )
     log_activity(application, user, Activity.Kind.AWARD, "Award record created")
+    if existing:
+        generate_budget_periods(award)
+        return award
     for template in ChecklistTemplate.objects.filter(applies_to=ChecklistTemplate.AppliesTo.AWARD, is_default=True):
         apply_checklist(application, template, user)
     if award.start_date and award.end_date:

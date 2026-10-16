@@ -122,7 +122,8 @@ def award_detail(request, pk):
 def award_edit(request, pk):
     award = get_object_or_404(Award.objects.select_related("application"), pk=pk)
     first_time = not award.periods.exists()
-    form = AwardForm(request.POST or None, instance=award, initial={"generate_schedule": first_time})
+    # A past award entered for the record (already closed) shouldn't fill the task list with overdue reports.
+    form = AwardForm(request.POST or None, instance=award, initial={"generate_schedule": first_time and award.is_active})
     if request.method == "POST" and form.is_valid():
         award = form.save()
         log_activity(award.application, request.user, Activity.Kind.AWARD, "Award details updated")

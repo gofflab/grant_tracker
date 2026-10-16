@@ -32,29 +32,32 @@ def analytics(request):
         n = int(span) if span.isdigit() else 5
         years = list(range(current - n + 1, current + 1))
     in_range = [a for a in apps if an.submission_year(a, basis) in years]
+    # Placed by a decision or award date because no submitted date or deadline is recorded, or not placed at all.
+    prefix = "FY" if basis == "fy" else ""
+    placed_late = [(a, f"{prefix}{an.submission_year(a, basis)}") for a in in_range if not (a.submitted_on or a.sponsor_deadline)]
+    undated = [a for a in apps if an.placement_date(a) is None]
 
     # Headline tiles
     decided = [a for a in in_range if a.status in Application.DECIDED]
     awarded = [a for a in decided if a.status == Application.Status.AWARDED]
     times = an.decision_times(in_range)
     percentiles = [float(a.percentile) for a in in_range if a.percentile is not None]
-    total_awarded = sum(float(getattr(a, "award", None) and a.award.awarded_total or a.requested_total or 0) for a in awarded)
+    awarded_money = an.awarded_by_year(apps, years, basis)
     tiles = {
         "submitted": len(in_range),
         "awarded": len(awarded),
         "decided": len(decided),
         "rate": round(len(awarded) * 100 / len(decided)) if decided else None,
-        "total_awarded": total_awarded,
+        "total_awarded": sum(awarded_money),
         "median_time": median(times) if times else None,
         "median_percentile": median(percentiles) if percentiles else None,
         "pending": sum(1 for a in in_range if a.status in Application.PENDING),
     }
 
-    labels = [("FY" if basis == "fy" else "") + str(y) for y in years]
+    labels = [prefix + str(y) for y in years]
     outcomes = an.outcomes_by_year(in_range, years, basis)
     funder_rows = an.rate_by(in_range, lambda a: a.funder.display_name if a.funder else "")
     mech_rows = an.rate_by(in_range, lambda a: (a.mechanism.upper() if len(a.mechanism) <= 6 else a.mechanism) if a.mechanism else "")
-    awarded_money = an.awarded_by_year(years, basis)
     runway_years = list(range(current - 1, current + 5))
     rw = an.runway(runway_years, basis, measure=request.GET.get("measure", "total"))
     pts = an.scores(apps)
@@ -82,6 +85,8 @@ def analytics(request):
     }
     return render(request, "grants/analytics.html", {
         "tiles": tiles,
+        "placed_late": placed_late,
+        "undated": undated,
         "charts": {k: json_for_chart(v) for k, v in charts.items()},
         "raw": charts,
         "funder_rows": funder_rows,

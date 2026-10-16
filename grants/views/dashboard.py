@@ -30,7 +30,14 @@ def dashboard(request):
     pending = Application.objects.filter(status__in=Application.PENDING)
     preparing = Application.objects.filter(status__in=Application.PRE_SUBMISSION)
     since = today.replace(year=today.year - 5)
-    rate, awarded_n, decided_n = analytics.success_rate(Application.objects.filter(decision_on__gte=since))
+    # Decided in the last five years; awards with no decision date count by their notice or start date.
+    no_decision = Q(decision_on__isnull=True)
+    recent = (
+        Q(decision_on__gte=since)
+        | no_decision & Q(award__notice_date__gte=since)
+        | no_decision & Q(award__notice_date__isnull=True, award__start_date__gte=since)
+    )
+    rate, awarded_n, decided_n = analytics.success_rate(Application.objects.filter(recent))
     weighted, unweighted = analytics.weighted_pipeline()
 
     upcoming = [
