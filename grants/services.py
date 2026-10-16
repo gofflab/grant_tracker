@@ -109,9 +109,10 @@ def change_status(application, new_status, user=None, note=""):
 def create_award(application, user=None, existing=False):
     """Create the award record, award-setup checklist, budget years and reporting schedule.
 
+    The notice date defaults to the decision date (today when the award is recorded as it happens).
     `existing` records an award made before it was entered here (for example, a past grant added as
-    Awarded): budget years only, no setup or reporting tasks, the decision date as the notice date, and
-    Closed if the project period is already over.
+    Awarded): budget years only, no setup or reporting tasks, and Closed if the project period is
+    already over.
     """
     funder = application.funder
     today = timezone.localdate()
@@ -124,7 +125,7 @@ def create_award(application, user=None, existing=False):
         awarded_total=application.requested_total,
         fa_rate=application.fa_rate,
         reporting=funder.default_reporting if funder else Funder.Reporting.ANNUAL,
-        notice_date=application.decision_on if existing else today,
+        notice_date=application.decision_on or (None if existing else today),
         status=Award.Status.CLOSED if existing and end and end < today else Award.Status.ACTIVE,
     )
     log_activity(application, user, Activity.Kind.AWARD, "Award record created")

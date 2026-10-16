@@ -3,6 +3,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Case, Count, IntegerField, ProtectedError, Value, When
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from accounts.permissions import editor_required, owner_required
@@ -10,7 +11,7 @@ from accounts.permissions import editor_required, owner_required
 from .. import services
 from ..forms import ChecklistItemFormSet, ChecklistTemplateForm, FunderForm, PersonForm, TagForm
 from ..models import ChecklistTemplate, Funder, Person, Tag
-from .common import done, render_form
+from .common import done, render_form, safe_next
 
 MODELS = {
     "funders": (Funder, FunderForm, "funder"),
@@ -55,7 +56,7 @@ def claim_lab_pi(request):
         messages.error(request, error)
     else:
         messages.success(request, f"{person} is now the Lab PI. New applications will add you to the team automatically.")
-    return redirect(request.POST.get("next") or "accounts:profile")
+    return redirect(safe_next(request, reverse("accounts:profile")))
 
 
 @editor_required

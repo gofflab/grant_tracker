@@ -1,6 +1,7 @@
 from datetime import timedelta
 from decimal import Decimal
 
+from dateutil.relativedelta import relativedelta
 from django.db.models import Q, Sum
 from django.shortcuts import render
 from django.utils import timezone
@@ -29,7 +30,7 @@ def dashboard(request):
 
     pending = Application.objects.filter(status__in=Application.PENDING)
     preparing = Application.objects.filter(status__in=Application.PRE_SUBMISSION)
-    since = today.replace(year=today.year - 5)
+    since = today - relativedelta(years=5)  # Feb 29 safe, unlike date.replace(year=...)
     # Decided in the last five years; awards with no decision date count by their notice or start date.
     no_decision = Q(decision_on__isnull=True)
     recent = (

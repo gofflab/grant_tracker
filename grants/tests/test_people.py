@@ -138,3 +138,50 @@ class LabPiBehaviourTests(TestCase):
         r = self.client.get("/settings/?tab=people")
         self.assertEqual(list(r.context["items"])[0], Person.lab_pi())
         self.assertContains(r, "Lab PI")
+
+    def test_claim_ignores_an_outside_next_url(self):
+        r = self.client.post("/settings/lab-pi/claim/", {"next": "https://evil.example/login"})
+        self.assertRedirects(r, "/accounts/profile/", fetch_redirect_response=False)
+        r = self.client.post("/settings/lab-pi/claim/", {"next": "/settings/?tab=people"})
+        self.assertRedirects(r, "/settings/?tab=people", fetch_redirect_response=False)
+
+
+class CurrentPendingLeadTests(TestCase):
+    """PD/PI on Current & Pending names the grant's lead, whoever the report is for."""
+
+    def setUp(self):
+        self.owner = make_user("owner", first_name="Loyal", last_name="Goff")
+        self.client.force_login(self.owner)
+        self.head, _ = services.claim_lab_pi(self.owner)
+        self.postdoc = Person.objects.create(first_name="Pat", last_name="Lee", kind=Person.Kind.LAB)
+
+    def pd_pi(self, app, person):
+        Personnel.objects.get_or_create(application=app, person=person, defaults={"role": Personnel.Role.POSTDOC})
+        r = self.client.get(f"/current-pending/?person={person.pk}")
+        return next(i["pi"] for i in r.context["active"] + r.context["pending"] if i["app"] == app)
+
+    def test_lab_pi_is_pd_pi_on_a_postdocs_report(self):
+        app = make_app(status=Application.Status.SUBMITTED, role=Application.Role.PI)
+        services.add_lab_pi(app)
+        self.assertEqual(self.pd_pi(app, self.postdoc), "Loyal Goff")
+        self.assertEqual(self.pd_pi(app, self.head), "Loyal Goff")
+
+    def test_named_contact_pi_wins(self):
+        app = make_app(status=Application.Status.SUBMITTED, role=Application.Role.MPI, contact_pi="Dwight Bergles")
+        services.add_lab_pi(app)
+        self.assertEqual(self.pd_pi(app, self.postdoc), "Dwight Bergles")
+
+    def test_all_multiple_pis_are_listed(self):
+        app = make_app(status=Application.Status.SUBMITTED, role=Application.Role.MPI)
+        services.add_lab_pi(app)
+        partner = Person.objects.create(first_name="Ana", last_name="Ruiz", kind=Person.Kind.PI)
+        Personnel.objects.create(application=app, person=partner, role=Personnel.Role.MPI)
+        self.assertEqual(set(self.pd_pi(app, self.postdoc).split(", ")), {"Loyal Goff", "Ana Ruiz"})
+
+    def test_lab_pi_named_when_not_on_the_team(self):
+        app = make_app(status=Application.Status.SUBMITTED, role=Application.Role.PI)
+        self.assertEqual(self.pd_pi(app, self.postdoc), "Loyal Goff")
+
+    def test_no_lead_when_lab_pi_is_only_a_co_investigator(self):
+        app = make_app(status=Application.Status.SUBMITTED, role=Application.Role.CO_I)
+        self.assertEqual(self.pd_pi(app, self.postdoc), "")
